@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 
 class ByteEncoding:
-    ENCODING = 'ISO-8859-1'  
+    ENCODING = 'UTF-8'  
 
     @staticmethod
     def to_bytes(data):

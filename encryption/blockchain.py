@@ -1,13 +1,7 @@
-from transaction import Reward
-from block import Block
-from utils.jsonifyable import Jsonifyable
-
-
-class InvalidChainException(Exception):
-    pass
-
-class InvalidBlockException(Exception):
-    pass
+from encryption.transaction import Coinbase
+from encryption.block import Block
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.utils.exceptions import *
 
 
 class BlockChain(Jsonifyable):
@@ -15,7 +9,6 @@ class BlockChain(Jsonifyable):
 
     def __init__(self, chain=None):
         self.load(chain)
-
 
     def load(self, chain):
         if not len(self.chain):
@@ -28,13 +21,11 @@ class BlockChain(Jsonifyable):
 
         for block in chain:
             self.add_block(block)
-        
-        return self
 
+        return self
 
     def remove_block(self):
         self.chain = self.chain[:-1]
-
 
     def add_block(self, block: Block):
         if not block.validate():
@@ -44,9 +35,8 @@ class BlockChain(Jsonifyable):
 
         while not self.validate_chain() and len(self.chain) > 1:
             self.remove_block()
-        
-        return self
 
+        return self
 
     def validate_chain(self):
         seen_ids = set()
@@ -55,7 +45,8 @@ class BlockChain(Jsonifyable):
             previous_block = self.chain[i - 1]
             for id in current_block.transaction_ids():
                 if id in seen_ids:
-                    print('detected invalid block: {} with tID: {}'.format(current_block.hash, id))
+                    print('detected invalid block: {} with tID: {}'.format(
+                        current_block.hash, id))
                     return False
                 seen_ids.add(id)
             if current_block.previous_hash != previous_block.hash:
@@ -63,11 +54,15 @@ class BlockChain(Jsonifyable):
 
         return True
 
-
     def get_last_hash(self):
         return self.chain[-1].hash
-
+    
+    def get_last_index(self):
+        return self.chain[-1].index
 
     def to_dict(self):
         return [block.to_dict() for block in self.chain]
 
+    def get_blocks(self):
+        for block in self.chain:
+            yield block

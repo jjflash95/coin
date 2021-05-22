@@ -8,7 +8,8 @@ import time
 GOOGLE = ('www.google.com', 80)
 
 
-class ThreadDebugging:
+def cthreadname():
+    return str(threading.currentThread().getName())
 
-    def debugmsg(self, msg):
-        print('[{}] {}'.format(str(threading.currentThread().getName()), msg))
+def debug(msg):
+    print('[{}] {}'.format(cthreadname(), msg))

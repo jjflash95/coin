@@ -1,21 +1,15 @@
-from utils.jsonifyable import Jsonifyable
-from keys.keys import ByteEncoding, PublicKey, Signature
-
-
-
-class CorruptedTransactionException(Exception):
-    pass
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.keys.keys import ByteEncoding, PublicKey, Signature
 
 
 class Transaction(Jsonifyable):
     def __init__(self, id, sender_id, recipient_id, amount, signature=None):
         self.signature = signature
-        self.data = {
-            'id': id,
-            'sender_id': sender_id,
-            'recipient_id': recipient_id,
-            'amount': amount
-        }
+        self.id = id
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
+        self.amount = amount
+
 
 
     @staticmethod
@@ -32,11 +26,14 @@ class Transaction(Jsonifyable):
 
 
     def get_id(self):
-        return self.data.get('id')
+        return self.id
 
     def to_dict(self):
         return {
-            'data': self.data,
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'recipient_id': self.recipient_id,
+            'amount': self.amount,
             'signature': str(self.signature)
         }
 
@@ -45,33 +42,40 @@ class Transaction(Jsonifyable):
         return self
 
     def get_data(self):
-        return self.jsonify(self.data)
+        return self.jsonify({
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'recipient_id': self.recipient_id,
+            'amount': self.amount,
+        })
 
     def sign(self, signature):
-        self.set_signature(signature(self.jsonify(self.data)))
+        self.set_signature(signature(self.jsonify(self.get_data())))
         return self
 
 
     def validate(self):
-        public = PublicKey.from_string(self.data.get('sender_id'))
+        public = PublicKey.from_string(self.sender_id)
         return public.verify(
-            self.jsonify(self.data),
+            self.get_data(),
             self.signature)
 
 
-class Reward(Transaction):
+class Coinbase(Transaction):
     def __init__(self, id, recipient_id, amount):
-        self.data = {
-            'id': id,
-            'recipient_id': recipient_id,
-            'amount': amount
-        }
+        self.id = id
+        self.recipient_id =  recipient_id
+        self.amount = amount
     
     def to_dict(self):
-        return {'data': self.data}
+        return {
+            'id': self.id,
+            'recipient_id': self.recipient_id,
+            'amount': self.amount
+        }
     
     def validate(self):
-        return self.data.get('amount') == Reward.amount
+        return self.amount == Coinbase.amount
 
 
 class TransactionArray:
@@ -92,8 +96,7 @@ class TransactionArray:
         return self.transactions
 
     def sort(self):
-        sortfunc = lambda x: x.get_id()
-        self.transactions.sort(key=sortfunc)
+        self.transactions.sort(key=lambda x: x.get_id())
 
     def __len__(self):
         return len(self.transactions)

@@ -3,22 +3,14 @@ import hashlib
 import secrets
 import string
 
-from keys.keys import ByteEncoding
-from transaction import Transaction, Reward, TransactionArray
-from transaction import CorruptedTransactionException
-from utils.jsonifyable import Jsonifyable
-from utils.timestamped import TimeStamped
+from encryption.keys.keys import ByteEncoding
+from encryption.transaction import Coinbase, Transaction, TransactionArray
+from encryption.utils.exceptions import *
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.utils.timestamped import TimeStamped
 
 
-
-class CorruptedBlockException(Exception):
-    pass
-
-class FullBlockException(Exception):
-    pass
-
-
-class ProofOfWork:
+class Meanwhile:
     def __init__(self):
         self.value = ''.join([secrets.choice(string.digits) for i in range(10)])
     
@@ -29,17 +21,18 @@ class ProofOfWork:
 class Block(TimeStamped, Jsonifyable):
     limit = 10
 
-    def __init__(self, reward, previous_hash = 0):
+    def __init__(self, coinbase, previous_hash = '0', last_index=0):
         super().__init__()
-        self.hash, self.proof_of_work = None, None
+        self.index = last_index + 1
+        self.hash, self.meanwhile = None, None
         self.previous_hash = previous_hash
         self.transactions = TransactionArray()
-        self.reward = reward
+        self.coinbase = coinbase
 
 
     def add(self, transaction: Transaction):
         if not transaction.validate():
-            raise CorruptedTransactionException()
+            raise InvalidTransactionException()
 
         if not self.can_add_transaction():
             raise FullBlockException()
@@ -73,11 +66,11 @@ class Block(TimeStamped, Jsonifyable):
         challenge = '0'*challenge
         block_data = self.get_block_data()
         
-        bhash, bpow = self.hash_data(block_data)
+        bhash, bmeanwhile = self.hash_data(block_data)
         while not bhash.startswith(challenge):
-            bhash, bpow = self.hash_data(block_data)
+            bhash, bmeanwhile = self.hash_data(block_data)
             
-        self.hash, self.proof_of_work = bhash, bpow
+        self.hash, self.meanwhile = bhash, bmeanwhile
         
         return self
 
@@ -86,7 +79,7 @@ class Block(TimeStamped, Jsonifyable):
         hashf = lambda h: hashlib.sha256(
             bytes(h, ByteEncoding.ENCODING)).hexdigest()
         
-        bpow = bpow and bpow or ProofOfWork() 
+        bpow = bpow and bpow or Meanwhile() 
 
         block['pow'] = str(bpow)
         serialized_block = self.jsonify(block)
@@ -94,11 +87,12 @@ class Block(TimeStamped, Jsonifyable):
         return hashf(serialized_block), bpow
 
     def validate(self):
-        return self.hash == self.hash_data(self.get_block_data(), self.proof_of_work)[0]
+        return self.hash == self.hash_data(self.get_block_data(), self.meanwhile)[0]
   
 
     def get_block_data(self):
         return {
+            'index': self.index,
             'previous_hash': self.previous_hash,
             'transactions': self.transactions.to_dict()
         }
@@ -106,11 +100,12 @@ class Block(TimeStamped, Jsonifyable):
 
     def to_dict(self):
         return {
+            'index': self.index,
             'previous_hash': self.previous_hash,
             'hash': self.hash,
-            'reward': self.reward.to_dict(),
+            'coinbase': self.coinbase.to_dict(),
             'transactions': [t.to_dict() for t in self.transactions.all()],
             'timestamp': self.timestamp(),
-            'proof_of_work': str(self.proof_of_work)
+            'meanwhile': str(self.meanwhile)
         }
 
