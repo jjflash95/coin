@@ -1,4 +1,4 @@
-SELECT bindex, bhash FROM Block b
+SELECT bindex, bhash, previous_hash, meanwhile, createtime FROM Block b
 INNER JOIN (
 WITH RECURSIVE split(bindex, hashpath, nexthashes) AS (
     SELECT bindex, '', hashpath||';' FROM (

@@ -35,6 +35,7 @@ class Database(metaclass=Singleton):
         try:
             return self.__execute(query)
         except sqlite3.Error as e:
+            print(query)
             print('Sqlite3 error!!!', e)
             self.__rollback()     
     
@@ -42,7 +43,10 @@ class Database(metaclass=Singleton):
         return self.cursor.fetchall()   
     
     def loadquery(self, q):
-        return open('{}/../../querys/{}.sql'.format(__file__, q)).read()
+        f = open('{}/../../querys/{}.sql'.format(__file__, q))
+        query = f.read()
+        f.close()
+        return query
 
     def __execute(self, query):
         self.cursor.execute(query)
@@ -58,3 +62,6 @@ class Database(metaclass=Singleton):
 
     def __initmemdb(self):
         self.cursor.executescript(self.loadquery('initdb'))
+
+    def __del__(self):
+        self.conn.close()

@@ -1,11 +1,9 @@
-
 # pyright: reportMissingModuleSource=false
 # pyright: reportMissingImports=false
-from load_external import BlockChain, Block, getkey, coinbase, send, recid, InvalidBlockException, Storage
-from load_external import *
+
+from load_external import BlockChain, Block, getkey, coinbase, send, recid, Storage, ChainModel
 import unittest
 import random
-
 
 
 class TestChainWithStorage(unittest.TestCase):
@@ -18,15 +16,16 @@ class TestChainWithStorage(unittest.TestCase):
     MAYBE ADD IT LATER, OR RESOLVE IT IN DB STORAGE
     """
 
-    challenge = 2
+    challenge = 3
     
     def makeblock(self, pk, last_hash, last_index):
         return Block(coinbase(pk), last_hash, last_index)
 
     def maketransaction(self, sk, pk, recipient_id, amount=None):
         if amount is None: amount = random.random()
-        return send(sk, pk, recipient_id, amount)
-    
+        t = send(sk, pk, recipient_id, amount)
+        return t
+
     def makechain(self, pk):
         genesis = self.makeblock(pk, '0', 0)
         genesis.calculate_hash(self.challenge)
@@ -48,15 +47,30 @@ class TestChainWithStorage(unittest.TestCase):
         return chain
 
     def testMakeValidChainFromLegitBlocksAndValidate(self):
-        totalblocks = 2
+        """
+        BUILDS BLOCKCHAIN VIA API, STORES IT IN MEMORY DB
+        RETRIEVES IT FROM MEMDB AND BUILDS AGAIN THE BLOCKCHAIN
+        EACH TRANSACTION HAS TO BE SORTED IN ORDER FOR HASHES
+        TO BE CORRECT, TRUNCATED AMOUNT TO 6 DECIMALS AND TIMESTAMP
+        SO DB DOESN'T ROUND THEM ON STORAGE (HASH CHANGES AND 
+        SIGNATURE DOES NOT VALIDATE, NICE BUG TO CATCH =D)
+        """
+        totalblocks = 7
         sk, pk = getkey()
         storage = Storage(onmemory=True)
-
         chain = self.makefullchain(sk, pk, recid(), totalblocks)
         storage.addchain(chain)
-        print(chain.validate())
-        print(chain)
-        print(storage.getblocks(True))
+
+        hollowblocks = storage.getchain()
+        self.assertEqual(len(chain), len(hollowblocks))
+
+        for i, block in enumerate(chain.getblocks()):
+            self.assertEqual(block.hash, hollowblocks[i].get('bhash'))
+        
+        b = storage.getchain(buildcascade=True)
+        blockchain = ChainModel.build(b)
+
+        self.assertTrue(chain == blockchain)
 
 
 if __name__  == '__main__':

@@ -1,10 +1,14 @@
+from encryption.utils.truncate import truncate
 import datetime
 
 class TimeStamped:
-    __timestamp__ = None
-
     def __init__(self):
-        self.__timestamp__ = datetime.datetime.now().timestamp()
+        self.__timestamp__ = truncate(datetime.datetime.now().timestamp())
 
+    @property
     def timestamp(self):
         return self.__timestamp__
+    
+    @timestamp.setter
+    def timestamp(self, ts):
+        self.__timestamp__ = ts

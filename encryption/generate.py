@@ -24,7 +24,7 @@ class Send(TimeStamped):
             str(public),
             recipient_id,
             amount,
-            self.timestamp())
+            self.timestamp)
 
         transaction = Transaction(tid, str(public), recipient_id, amount)
         signature = self.get_signature(secret, transaction.get_data())
@@ -51,7 +51,7 @@ class BlockCoinbase(Send):
             str(public),
             str(public),
             BlockCoinbase.AMOUNT,
-            self.timestamp())
+            self.timestamp)
 
         self.transaction = Coinbase(self.id, str(public), BlockCoinbase.AMOUNT)
 
@@ -60,7 +60,7 @@ class BlockCoinbase(Send):
             str(self.public),
             recipient_id,
             amount,
-            self.timestamp())
+            self.timestamp)
 
         return Coinbase(tid, recipient_id, amount)
 

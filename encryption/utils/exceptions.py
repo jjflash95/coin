@@ -15,3 +15,4 @@ class InvalidBlockException(Exception):
 
 class FullBlockException(Exception):
     pass
+

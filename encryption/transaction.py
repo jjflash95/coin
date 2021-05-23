@@ -1,6 +1,7 @@
-from encryption.utils.jsonifyable import Jsonifyable
 from encryption.keys.keys import ByteEncoding, PublicKey, Signature
 from encryption.utils.exceptions import *
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.utils.truncate import truncate
 
 
 class Transaction(Jsonifyable):
@@ -14,7 +15,7 @@ class Transaction(Jsonifyable):
         self.id = id
         self.sender_id = sender_id
         self.recipient_id = recipient_id
-        self.amount = amount
+        self.amount = truncate(amount)
 
     @staticmethod
     def from_json(data):
@@ -23,7 +24,7 @@ class Transaction(Jsonifyable):
         tid = data.get('id')
         sender_id = data.get('sender_id')
         recipient_id = data.get('recipient_id')
-        amount = data.get('amount')
+        amount = truncate(data.get('amount'))
         signature = data.get('signature')
 
         return Transaction(tid, sender_id, recipient_id, amount, Signature(signature))
@@ -94,7 +95,7 @@ class Coinbase(Transaction):
     def __init__(self, id, recipient_id, amount):
         self.id = id
         self.recipient_id =  recipient_id
-        self.amount = amount
+        self.amount = truncate(amount)
     
     def to_dict(self):
         return {
@@ -105,6 +106,16 @@ class Coinbase(Transaction):
     
     def validate(self):
         return self.amount == Coinbase.amount
+    
+    def __eq__(self, other):
+        if self.id != other.id:
+            return False
+        if self.recipient_id != other.recipient_id:
+            return False
+        if self.amount != other.amount:
+            return False
+
+        return True
 
 
 class TransactionArray:
@@ -133,3 +144,16 @@ class TransactionArray:
 
     def __len__(self):
         return len(self.transactions)
+
+    def __eq__(self, other):
+        self.sort()
+        other.sort()
+
+        if len(self.transactions) != len(other.transactions):
+            return False
+    
+        for i, transaction in enumerate(self.transactions):
+            if transaction != other.transactions[i]:
+                return False
+
+        return True

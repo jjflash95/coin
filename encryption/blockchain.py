@@ -4,19 +4,19 @@ from encryption.utils.exceptions import *
 
 
 class BlockChain(Jsonifyable):
-    def __init__(self, chain=None):
-        self.load(chain)
+    def __init__(self, blocks=None):
+        self.load(blocks)
 
-    def load(self, chain):
+    def load(self, blocks):
         self.chain = []
 
         if not len(self.chain):
-            genesis = chain[0]
+            genesis = blocks[0]
             if not genesis.validate():
                 raise InvalidBlockException('Invalid genesis block')
             self.chain.append(genesis)
 
-        for block in chain[1:]:
+        for block in blocks[1:]:
             self.add(block)
 
         return self
@@ -24,7 +24,7 @@ class BlockChain(Jsonifyable):
     def remove_block(self):
         self.chain = self.chain[:-1]
 
-    def add(self, blocks: Block):
+    def add(self, blocks):
         if type(blocks) != list:
             blocks = [blocks]
         
@@ -45,8 +45,6 @@ class BlockChain(Jsonifyable):
             previous_block = self.chain[i - 1]
             for id in current_block.transaction_ids():
                 if id in seen_ids:
-                    print('detected invalid block: {} with ID: {}'.format(
-                        current_block.hash, id))
                     return False
                 seen_ids.add(id)
             if current_block.previous_hash != previous_block.hash:
@@ -63,7 +61,7 @@ class BlockChain(Jsonifyable):
     def to_dict(self):
         return [block.to_dict() for block in self.chain]
 
-    def get_blocks(self):
+    def getblocks(self):
         for block in self.chain:
             yield block
 
@@ -72,3 +70,13 @@ class BlockChain(Jsonifyable):
 
     def __len__(self):
         return len(self.chain)
+    
+    def __eq__(self, other):
+        if len(self.chain) != len(other.chain):
+            return False
+        
+        for i, block in enumerate(self.chain):
+            if block != other.chain[i]:
+                return False
+        
+        return True

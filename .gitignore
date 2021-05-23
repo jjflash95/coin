@@ -131,3 +131,7 @@ dmypy.json
 # Private & Public keys
 *private_key.pem
 *public_key.pem
+
+*.vscode/
+
+*.db

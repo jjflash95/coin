@@ -1,7 +1,6 @@
 # pyright: reportMissingModuleSource=false
 # pyright: reportMissingImports=false
 from load_external import Block, getkey, coinbase, send, recid
-from load_external import *
 import unittest
 import random
 
