@@ -61,7 +61,7 @@ class TestChainWithStorage(unittest.TestCase):
         chain = self.makefullchain(sk, pk, recid(), totalblocks)
         storage.addchain(chain)
 
-        hollowblocks = storage.getchain()
+        hollowblocks = storage.getchain(buildcascade=False)
         self.assertEqual(len(chain), len(hollowblocks))
 
         for i, block in enumerate(chain.getblocks()):

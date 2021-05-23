@@ -134,7 +134,12 @@ class Storage:
 
         return block[0], coinbase[0], list(transactions)
 
-    def __getchain(self, buildcascade=False):
+    def __getchain(self, buildcascade=True):
+        """
+        IF NOT BUILDCASCADE, JUST RETURNS THE LONGEST ROUTE
+        OF HASH => PREV_HASH PAIRS FOR EVERY BLOCK ON CHAIN
+        AND IGNORES TRANSACTIONS AND COINBASE
+        """
         query = self.loadquery('get_chain')
         if buildcascade:
             query = """
@@ -153,7 +158,7 @@ class Storage:
         self.db.execute(query)
         return self.db.fetchall()
 
-    def getchain(self, buildcascade=False):
+    def getchain(self, buildcascade=True):
         blocks = self.__getchain(buildcascade)
         return blocks
 

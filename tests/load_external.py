@@ -24,6 +24,8 @@ from storage.storage import Storage
 from encryption.utils.exceptions import *
 from storage.models.models import ChainModel
 
+from p2p.peer import Peer
+
 def getkey(ktype=''):
     if ktype == 'secret': return PrivateKey(os.getenv('KEYS_PATH'))
     elif ktype == 'public': return PublicKey(os.getenv('KEYS_PATH'))

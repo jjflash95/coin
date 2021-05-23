@@ -10,6 +10,7 @@ class MSGType():
     ERROR = 'ERRO'
 
     GET_CHAIN = 'GTCH'
+    PUT_CHAIN = 'PCHN'
     TRANSACTION = 'NTRS'
 
     @staticmethod

@@ -1,16 +1,19 @@
-from network.constants import *
-from network.connection import P2PConnection
-from network.requests import MSGType
+import sys
 from queue import Queue
+
+from p2p.network.connection import P2PConnection
+from p2p.network.constants import *
+from p2p.network.requests import MSGType
 
 
 class Node:
-    PEERS = {}
-    HANDLERS = {}
-    QUEUE = Queue()
+    def __init__(self, maxpeers, serverport, guid=None, serverhost=None, debug=0):
+        self.peertable = {}
+        self.handlers = {}
+        self.queue = Queue()
 
-    def __init__(self, maxpeers, serverport, guid=None, serverhost=None, debug=1):
         self.debug = debug
+        self.output = sys.stdout
 
         self.maxpeers = int(maxpeers)
         self.serverport = int(serverport)
@@ -57,7 +60,7 @@ class Node:
         return s
 
     def peers(self):
-        for peerid, pdata in self.PEERS.items():
+        for peerid, pdata in self.peertable.items():
             yield (peerid, pdata)
 
     def send(self, peerid, msgtype, msgdata, waitresponse=True):
@@ -66,7 +69,7 @@ class Node:
 
         nextpid, host, port = self.router(peerid)
         if not nextpid:
-            debug('Unable to route {} to {}'.format(msgtype, peerid))
+            debug(self.output, 'Unable to route {} to {}'.format(msgtype, peerid))
             
         return self.__send(host, port, msgtype, msgdata, peerid=nextpid,
                         waitresponse=waitresponse)
@@ -77,14 +80,14 @@ class Node:
         try:
             peerconn = P2PConnection(peerid, host, port, debug=self.debug)
             peerconn.send(msgtype, msgdata)
-            debug('Sent {}: {}'.format(peerid, msgtype))
+            debug(self.output, 'Sent {}: {}'.format(peerid, msgtype))
             
             if waitresponse:
                 response = peerconn.receivedata()
 
             while (response != (None,None)):
                 responses.append(response)
-                debug('Got reply {}: {}'.format(peerid, str(responses)))
+                debug(self.output, 'Got reply {}: {}'.format(peerid, str(responses)))
                 response = peerconn.receivedata()
             peerconn.close()
         except KeyboardInterrupt:
@@ -97,26 +100,26 @@ class Node:
 
 
     def getpeerids(self):
-        return self.PEERS.keys()
+        return self.peertable.keys()
 
     def setrouter(self, router):
         self.router = router
 
     def addpeer(self, peerid, host, port):
         """@return void"""
-        if peerid in self.PEERS.keys():
+        if peerid in self.peertable.keys():
             return
     
-        if self.maxpeers and len(self.PEERS.keys()) >= self.maxpeers:
+        if self.maxpeers and len(self.peertable.keys()) >= self.maxpeers:
             return
 
-        self.PEERS[peerid] = (host, int(port))
+        self.peertable[peerid] = (host, int(port))
 
     def getpeer(self, peerid):
-        if not peerid in self.PEERS:
+        if not peerid in self.peertable:
             return (None, None)
 
-        return self.PEERS[peerid]
+        return self.peertable[peerid]
 
     def startstabilizer(self, stabilizer, delay):
         """Runs stabilizer func every n seconds"""
@@ -127,7 +130,7 @@ class Node:
 
     def addhandler(self, msgtype, handler):
         assert len(msgtype) == MSGType.len()
-        self.HANDLERS[msgtype] = handler
+        self.handlers[msgtype] = handler
 
 
     def removepeers(self, peerids):
@@ -135,30 +138,30 @@ class Node:
             peerids = [peerids]
 
         for peerid in peerids:
-            if peerid in self.PEERS.keys():
-                del self.PEERS[peerid]
+            if peerid in self.peertable.keys():
+                del self.peertable[peerid]
 
 
     def numberofpeers(self):
-        return len(self.PEERS.keys())
+        return len(self.peertable.keys())
 
 
     def maxpeersreached(self):
         if not self.maxpeers:
             return False
 
-        return self.maxpeers > 0 and len(self.PEERS.keys()) >= self.maxpeers
+        return self.maxpeers > 0 and len(self.peertable.keys()) >= self.maxpeers
 
 
     def checklivepeers(self):
         """ping all peers to check if they are still alive"""
 
         remove = []
-        for pid in self.PEERS:
+        for pid in self.peertable:
             isconnected = False
             try:
-                debug('Check live {}'.format(pid))
-                (host, port) = self.PEERS[pid]
+                debug(self.output, 'Check live {}'.format(pid))
+                (host, port) = self.peertable[pid]
                 peer = P2PConnection(pid, host, port, debug=self.debug)
                 peer.send('PING', '')
                 isconnected = True
@@ -187,18 +190,18 @@ class Node:
     
         responses = []
         try:
-            debug('Sending {}{}: {}'.format(host, port, msgtype))
+            debug(self.output, 'Sending {}{}: {}'.format(host, port, msgtype))
             peerconn = P2PConnection(self.guid, host, port,
                     debug=self.debug)
             peerconn.send(msgtype, msgdata)
-            debug('Sent {} => {}'.format(peerconn.id, msgtype))
+            debug(self.output, 'Sent {} => {}'.format(peerconn.id, msgtype))
 
             if waitresponse:
                 reply = peerconn.receivedata()
                 while reply != (None, None):
                     responses.append(reply)
 
-                    debug('Got reply {}: {}'.format(pid,
+                    debug(self.output, '[ConnAndSend] Got reply from "{}": {}'.format(pid,
                                     str(responses)))
                     reply = peerconn.receivedata()
             peerconn.close()
@@ -219,7 +222,7 @@ class Node:
     def startserver(self):
         serversocket = self.makeserversocket(self.serverport)
         serversocket.settimeout(2)
-        debug('Server started: {} ({}:{})'.format(
+        debug(self.output, 'Server started: {} ({}:{})'.format(
                                                     self.guid,
                                                     self.serverhost,
                                                     self.serverport))
@@ -229,10 +232,10 @@ class Node:
     def loop(self, serversocket):
         while not self.shutdown:
             try:
-                if not self.QUEUE.empty():
-                    self.__execute(*self.QUEUE.get())
+                if not self.queue.empty():
+                    self.__execute(*self.queue.get())
 
-                debug('Listening for connections...')
+                debug(self.output, 'Listening for connections...')
                 clientsock, clientaddr = serversocket.accept()
                 clientsock.settimeout(None)
 
@@ -251,12 +254,12 @@ class Node:
                     traceback.print_exc()
                     continue
 
-        debug('Main loop exiting')
+        debug(self.output, 'Main loop exiting')
         serversocket.close()
 
     def __handlepeer(self, clientsock):
-        debug('New child {}'.format(cthreadname()))
-        debug('Connected {}'.format(str(clientsock.getpeername())))
+        debug(self.output, 'New child {}'.format(cthreadname()))
+        debug(self.output, 'Connected {}'.format(str(clientsock.getpeername())))
 
         host, port = clientsock.getpeername()
         peerconn = P2PConnection(None, host, port, clientsock,
@@ -265,18 +268,18 @@ class Node:
         try:
             msgtype, msgdata = peerconn.receivedata()
             msgtype = msgtype.upper() if msgtype else ''
-            if msgtype not in self.HANDLERS.keys():
-                debug('Not handled: {}: {}'.format(msgtype, msgdata))
+            if msgtype not in self.handlers.keys():
+                debug(self.output, 'Not handled: {}: {}'.format(msgtype, msgdata))
             else:
-                debug('Handling peer msg: {}: {}'.format(msgtype,
-                             msgdata))
-                self.HANDLERS.get(msgtype)(peerconn, msgdata)
+                debug(self.output, 'Handling peer msg: {}: {}...'.format(msgtype,
+                             msgdata[:70]))
+                self.handlers.get(msgtype)(peerconn, msgdata)
         except KeyboardInterrupt:
             raise
         except:
             if self.debug:
                 traceback.print_exc()
 
-        debug('Disconnecting ' + str(clientsock.getpeername()))
+        debug(self.output, 'Disconnecting ' + str(clientsock.getpeername()))
         peerconn.close()
 

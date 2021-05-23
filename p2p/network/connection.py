@@ -1,4 +1,4 @@
-from network.constants import *
+from p2p.network.constants import *
 
 
 class TransferSocket:

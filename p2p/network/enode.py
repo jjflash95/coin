@@ -1,22 +1,22 @@
-from network.constants import *
-from network.node import Node
-from network.requests import MSGType
+from p2p.network.constants import *
+from p2p.network.node import Node
+from p2p.network.requests import MSGType
 
 
 
 class ExtendedNode(Node):
 
-    def __init__(self, maxpeers, serverport, guid=None, serverhost=None):
+    def __init__(self, maxpeers, serverport, guid=None, serverhost=None, debug=0):
+        super(ExtendedNode, self).__init__(maxpeers, serverport, guid, serverhost, debug=debug)
+
         self.setrouter(self.__router)
 
         handlers = self._gethandlers()
         for mt in handlers.keys():
             self.addhandler(mt, handlers[mt])
-        
-        super(ExtendedNode, self).__init__(maxpeers, serverport, guid, serverhost)
 
 
-    def buildpeers(self, host, port, depth=1):
+    def buildpeers(self, host, port, depth=30):
         """Builds peers from given host, by asking for his routing
         table and recursively adding all peers until reaching maximum
         peers or max recursive depth (determined by depth variable)"""
@@ -24,13 +24,13 @@ class ExtendedNode(Node):
         if self.maxpeersreached() or not depth:
             return
 
-        debug('Building peers from ({},{})'.format(host, port))
+        debug(self.output, 'Building peers from ({},{})'.format(host, port))
 
         try:
             # returns an array of replies but we only expect one
             _, peerid = self.connectandsend(host, port, MSGType.PEERGUID, '')[0]
 
-            debug('contacted ' + peerid)
+            debug(self.output, 'contacted ' + peerid)
             resp = self.connectandsend(host, port, MSGType.PEERJOIN,
                     '{} {} {}'.format(self.guid, self.serverhost,
                     self.serverport))[0]
@@ -48,7 +48,7 @@ class ExtendedNode(Node):
             
             pnum = resp[0]
             resp = resp[1:]
-            debug('got routing table with {} peers'.format(pnum))
+            debug(self.output, 'got routing table with {} peers'.format(pnum))
             for res in resp:
                 (nextpid, host, port) = res[1].split()
                 if nextpid == self.guid:
@@ -65,7 +65,7 @@ class ExtendedNode(Node):
         if peerid not in self.getpeerids():
             return (None, None, None)
  
-        return [peerid, *self.PEERS[peerid]]
+        return [peerid, *self.peertable[peerid]]
 
     def _gethandlers(self):
         return {
@@ -81,17 +81,17 @@ class ExtendedNode(Node):
             peerid, host, port = data.split()
 
             if self.maxpeersreached():
-                debug('maxpeers {} reached: connection terminating'.format(self.maxpeers))
+                debug(self.output, 'maxpeers {} reached: connection terminating'.format(self.maxpeers))
                 peerconn.send(MSGType.ROUTING_TABLE, 'JOIN: connection refused, too many peers')
 
             if peerid not in self.getpeerids() and peerid != self.guid:
                 self.addpeer(peerid, host, port)
-                debug('added peer: {}'.format(peerid))
+                debug(self.output, 'added peer: {}'.format(peerid))
                 peerconn.send(MSGType.REPLY, 'JOIN: added peer: {}'.format(peerid))
             else:
                 peerconn.send(MSGType.ROUTING_TABLE, 'JOIN: peer already in table {}'.format(peerid))
         except:
-            debug('Can\'t add peer {}: {}'.format(str(peerconn), data))
+            debug(self.output, 'Can\'t add peer {}: {}'.format(str(peerconn), data))
             peerconn.send(MSGType.ROUTING_TABLE, 'Join: incorrect arguments')
         finally:
             self.peerlock.release()
@@ -101,7 +101,7 @@ class ExtendedNode(Node):
 
         self.peerlock.acquire()
         try:
-            debug('Listing peers {}'.format(self.numberofpeers()))
+            debug(self.output, 'Listing peers {}'.format(self.numberofpeers()))
             peerconn.send(MSGType.REPLY, '{}'.format(self.numberofpeers()))
             for pid in self.getpeerids():
                 (host, port) = self.getpeer(pid)
