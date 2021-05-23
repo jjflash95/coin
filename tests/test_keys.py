@@ -7,6 +7,13 @@ import unittest
 
 
 class TestKeys(unittest.TestCase):
+    """
+    THIS TESTS ARE SUPPOSED TO CHECK THAT KEY PAIRS WORK AS
+    INTENDED, THAT SIGNING AND VERIFICATION IS CORRECTLY
+    IMPLEMENTED AND LOADING A KEY FROM A STRING ASWELL AS AN 
+    RSA-FORMATTED FILE WORK THE SAME WAY
+    """
+
 
     def testLoadInvalidKey(self):
         with self.assertRaises(Exception) as context:

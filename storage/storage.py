@@ -2,6 +2,7 @@
 from encryption.keys.keys import Signature
 from encryption.transaction import Transaction, Coinbase
 from encryption.block import Block
+from encryption.blockchain import BlockChain
 from storage.db.db import Database
 from storage.utils.utils import *
 
@@ -11,7 +12,11 @@ class Storage:
         self.db = Database(onmemory)
 
     def loadquery(self, q):
-        return open('{}/../querys/{}.sql'.format(__file__,q)).read()
+        return self.db.loadquery(q)
+
+    def addchain(self, chain: BlockChain):
+        for block in chain.get_blocks():
+            self.addblock(block)
 
     def addblock(self, block: Block):
         blockindex = block.index
@@ -124,7 +129,7 @@ class Storage:
 
         return block[0], coinbase[0], list(transactions)
 
-    def getblocks(self, build=True):
+    def getblocks(self, build=False):
         query = self.loadquery('get_blocks')
         if build:
             query = """

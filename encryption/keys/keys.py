@@ -11,6 +11,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from encryption.utils.exceptions import *
 
 
 class ByteEncoding:
@@ -138,6 +139,9 @@ class PublicKey(Key):
 
     @staticmethod
     def from_string(string):
+        if not string:
+            raise InvalidKeyException()
+
         begin = '-----BEGIN PUBLIC KEY-----\n'
         end = '\n-----END PUBLIC KEY-----'
 

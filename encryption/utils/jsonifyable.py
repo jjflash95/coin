@@ -12,3 +12,6 @@ class Jsonifyable(metaclass=ABCMeta):
 
     def jsonify(self, data):
         return json.dumps(data, sort_keys=True)
+
+    def __str__(self):
+        return self.to_json()

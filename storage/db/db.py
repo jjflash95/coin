@@ -27,17 +27,23 @@ class Database(metaclass=Singleton):
         self.conn = sqlite3.connect(self.__buildpath(onmemory))
         self.conn.row_factory = dict_factory
         self.cursor = self.conn.cursor()
+        if onmemory:
+            self.__initmemdb()
+
 
     def execute(self, query):
         try:
             return self.__execute(query)
-        except sqlite3.Error:
-            print('Sqlite3 error!!!')
+        except sqlite3.Error as e:
+            print('Sqlite3 error!!!', e)
             self.__rollback()     
     
     def fetchall(self):
         return self.cursor.fetchall()   
     
+    def loadquery(self, q):
+        return open('{}/../../querys/{}.sql'.format(__file__, q)).read()
+
     def __execute(self, query):
         self.cursor.execute(query)
         self.conn.commit()
@@ -47,6 +53,8 @@ class Database(metaclass=Singleton):
 
     def __buildpath(self, onmemory):
         if onmemory:
-            return "file::memory:?cache=shared"
+            return ":memory:"
         return "{}/{}".format(os.getenv('DB_PATH'), "storage.db")
 
+    def __initmemdb(self):
+        self.cursor.executescript(self.loadquery('initdb'))

@@ -4,7 +4,7 @@ import secrets
 import string
 
 from encryption.keys.keys import ByteEncoding
-from encryption.transaction import Coinbase, Transaction, TransactionArray
+from encryption.transaction import Transaction, TransactionArray
 from encryption.utils.exceptions import *
 from encryption.utils.jsonifyable import Jsonifyable
 from encryption.utils.timestamped import TimeStamped
@@ -30,19 +30,23 @@ class Block(TimeStamped, Jsonifyable):
         self.coinbase = coinbase
 
 
-    def add(self, transaction: Transaction):
-        if not transaction.validate():
-            raise InvalidTransactionException()
-
-        if not self.can_add_transaction():
-            raise FullBlockException()
-
-        return self._add(transaction)
+    def add(self, transactions: Transaction):
+        if not type(transactions) == list:
+            transactions = [transactions]
         
+        for transaction in transactions:
+            if not transaction.validate():
+                raise InvalidTransactionException()
+
+            if not self.can_add_transaction():
+                raise FullBlockException()
+
+            self._add(transaction)
+        return self   
 
     def _add(self, transaction: Transaction):
         if self.already_has(transaction):       
-            return self
+            return
 
         self.transactions.append(transaction)
         self.transactions.sort()
@@ -108,4 +112,3 @@ class Block(TimeStamped, Jsonifyable):
             'timestamp': self.timestamp(),
             'meanwhile': str(self.meanwhile)
         }
-

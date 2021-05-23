@@ -1,4 +1,8 @@
+class InvalidAmountException(Exception):
+    pass
 
+class InvalidKeyException(Exception):
+    pass
 
 class InvalidTransactionException(Exception):
     pass
