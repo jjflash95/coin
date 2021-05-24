@@ -26,6 +26,8 @@ class ExtendedNode(Node):
 
         debug(self.output, 'Building peers from ({},{})'.format(host, port))
 
+        peerid = '{}:{}'.format(host, port)
+
         try:
             # returns an array of replies but we only expect one
             _, peerid = self.connectandsend(host, port, MSGType.PEERGUID, '')[0]

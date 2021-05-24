@@ -40,14 +40,12 @@ class BlockChain(Jsonifyable):
 
     def validate(self):
         seen_ids = set()
-        for i in range(1, len(self.chain)):
-            current_block = self.chain[i]
-            previous_block = self.chain[i - 1]
-            for id in current_block.transaction_ids():
-                if id in seen_ids:
-                    return False
+        for previndex, currentblock in enumerate(self.chain[1:]):
+            previous_block = self.chain[previndex]
+            for id in currentblock.transaction_ids():
+                if id in seen_ids: return False
                 seen_ids.add(id)
-            if current_block.previous_hash != previous_block.hash:
+            if currentblock.previous_hash != previous_block.hash:
                 return False
 
         return True

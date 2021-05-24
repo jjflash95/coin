@@ -20,15 +20,13 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class Database(metaclass=Singleton):
-    conn, cursor = None, None
+class Database():
 
     def __init__(self, onmemory=False):
         self.conn = sqlite3.connect(self.__buildpath(onmemory))
         self.conn.row_factory = dict_factory
         self.cursor = self.conn.cursor()
-        if onmemory:
-            self.__initmemdb()
+        self.__initdb()
 
 
     def execute(self, query):
@@ -60,7 +58,7 @@ class Database(metaclass=Singleton):
             return ":memory:"
         return "{}/{}".format(os.getenv('DB_PATH'), "storage.db")
 
-    def __initmemdb(self):
+    def __initdb(self):
         self.cursor.executescript(self.loadquery('initdb'))
 
     def __del__(self):

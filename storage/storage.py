@@ -1,5 +1,3 @@
-from storage.models.models import BlockModel
-from storage.models.models import ChainModel
 from encryption.transaction import Transaction, Coinbase
 from encryption.block import Block
 from encryption.blockchain import BlockChain

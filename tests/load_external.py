@@ -23,6 +23,7 @@ from encryption.transaction import Transaction
 from storage.storage import Storage
 from encryption.utils.exceptions import *
 from storage.models.models import ChainModel
+from localstorage import LocalStorage
 
 from p2p.peer import Peer
 
