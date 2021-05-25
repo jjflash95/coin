@@ -207,7 +207,7 @@ class Node:
             peerconn.close()
         except KeyboardInterrupt:
             raise
-        except Exception as e:
+        except Exception:
             if self.debug:
                 traceback.print_exc()
 

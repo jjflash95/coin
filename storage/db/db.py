@@ -1,6 +1,5 @@
 import sqlite3
 import os
-from sqlite3.dbapi2 import connect
 
 
 def dict_factory(cursor, row):
@@ -41,7 +40,9 @@ class Database():
         return self.cursor.fetchall()   
     
     def loadquery(self, q):
-        f = open('{}/../../querys/{}.sql'.format(__file__, q))
+        path = os.path.realpath(__file__) 
+        fdir = path[0:len(path)-len(os.path.basename(__file__))]
+        f = open('{}/../querys/{}.sql'.format(fdir, q))
         query = f.read()
         f.close()
         return query
