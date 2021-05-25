@@ -1,73 +1,80 @@
-from transaction import Reward
-from block import Block
-from utils.jsonifyable import Jsonifyable
-
-
-class InvalidChainException(Exception):
-    pass
-
-class InvalidBlockException(Exception):
-    pass
+from encryption.block import Block
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.utils.exceptions import *
 
 
 class BlockChain(Jsonifyable):
-    chain = []
+    def __init__(self, blocks=None):
+        self.load(blocks)
 
-    def __init__(self, chain=None):
-        self.load(chain)
+    def load(self, blocks):
+        self.chain = []
 
-
-    def load(self, chain):
         if not len(self.chain):
-            genesis = chain[0]
+            genesis = blocks[0]
             if not genesis.validate():
-                raise InvalidBlockException()
-
+                raise InvalidBlockException('Invalid genesis block')
             self.chain.append(genesis)
-            chain = chain[1:]
 
-        for block in chain:
-            self.add_block(block)
-        
+        for block in blocks[1:]:
+            self.add(block)
+
         return self
-
 
     def remove_block(self):
         self.chain = self.chain[:-1]
 
-
-    def add_block(self, block: Block):
-        if not block.validate():
-            return self
-
-        self.chain.append(block)
-
-        while not self.validate_chain() and len(self.chain) > 1:
-            self.remove_block()
+    def add(self, blocks):
+        if type(blocks) != list:
+            blocks = [blocks]
         
+        for block in blocks:
+            if not block.validate():
+                raise InvalidBlockException('invalid block: {}'.format(block.hash))
+            self.chain.append(block)
+
+            while not self.validate() and len(self.chain) > 1:
+                self.remove_block()
+
         return self
 
-
-    def validate_chain(self):
+    def validate(self):
         seen_ids = set()
-        for i in range(1, len(self.chain)):
-            current_block = self.chain[i]
-            previous_block = self.chain[i - 1]
-            for id in current_block.transaction_ids():
-                if id in seen_ids:
-                    print('detected invalid block: {} with tID: {}'.format(current_block.hash, id))
-                    return False
+        for previndex, currentblock in enumerate(self.chain[1:]):
+            previous_block = self.chain[previndex]
+            for id in currentblock.transaction_ids():
+                if id in seen_ids: return False
                 seen_ids.add(id)
-            if current_block.previous_hash != previous_block.hash:
+            if currentblock.previous_hash != previous_block.hash:
                 return False
 
         return True
 
-
     def get_last_hash(self):
         return self.chain[-1].hash
-
+    
+    def get_last_index(self):
+        return self.chain[-1].index
 
     def to_dict(self):
         return [block.to_dict() for block in self.chain]
 
+    def getblocks(self):
+        for block in self.chain:
+            yield block
+
+    def __str__(self):
+        return self.to_json()
+
+    def __len__(self):
+        return len(self.chain)
+    
+    def __eq__(self, other):
+        if len(self.chain) != len(other.chain):
+            return False
+        
+        for i, block in enumerate(self.chain):
+            if block != other.chain[i]:
+                return False
+        
+        return True

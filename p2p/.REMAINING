@@ -1,11 +1,5 @@
 startstabilizer(stabilizer, delay) DONE
-addhandler(msgtype, handler) 
 addrouter(router) DONE
-addpeer(peerid, host, port) DONE
-getpeer(peerid) DONE
-removepeer(peerid) DONE
-addpeerat(loc, peerid, host, port) DONE
-getpeerids()
-numberofpeers():
-maxpeersreached():
-checklivepeers()
+checklivepeers() DONE, REWORK?
+
+addpeerat(loc, peerid, host, port) MAYBE ADD?

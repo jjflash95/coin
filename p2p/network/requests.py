@@ -1,6 +1,6 @@
 
 
-class Type():
+class MSGType():
     PEERGUID = 'GUID'
     ROUTING_TABLE = 'CPRT'
     PEERJOIN = 'JOIN'
@@ -9,6 +9,9 @@ class Type():
     REPLY = 'REPL'
     ERROR = 'ERRO'
 
+    GET_CHAIN = 'GTCH'
+    PUT_CHAIN = 'PCHN'
+    TRANSACTION = 'NTRS'
 
     @staticmethod
     def len():

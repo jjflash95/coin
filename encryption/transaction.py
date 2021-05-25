@@ -1,42 +1,44 @@
-from utils.jsonifyable import Jsonifyable
-from keys.keys import ByteEncoding, PublicKey, Signature
-
-
-
-class CorruptedTransactionException(Exception):
-    pass
+from encryption.keys.keys import ByteEncoding, PublicKey, Signature
+from encryption.utils.exceptions import *
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.utils.truncate import truncate
 
 
 class Transaction(Jsonifyable):
     def __init__(self, id, sender_id, recipient_id, amount, signature=None):
-        self.signature = signature
-        self.data = {
-            'id': id,
-            'sender_id': sender_id,
-            'recipient_id': recipient_id,
-            'amount': amount
-        }
+        if not sender_id or not recipient_id:
+            raise InvalidKeyException()
+        if amount < 0:
+            raise InvalidAmountException()
 
+        self.signature = signature
+        self.id = id
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
+        self.amount = truncate(amount)
 
     @staticmethod
     def from_json(data):
         import json
-        data = json.loads(data, encoding=ByteEncoding.ENCODING)
-        tid = data.get('data').get('id')
-        sender_id = data.get('data').get('sender_id')
-        recipient_id = data.get('data').get('recipient_id')
-        amount = data.get('data').get('amount')
+        data = json.loads(data)
+        tid = data.get('id')
+        sender_id = data.get('sender_id')
+        recipient_id = data.get('recipient_id')
+        amount = truncate(data.get('amount'))
         signature = data.get('signature')
 
         return Transaction(tid, sender_id, recipient_id, amount, Signature(signature))
 
 
     def get_id(self):
-        return self.data.get('id')
+        return self.id
 
     def to_dict(self):
         return {
-            'data': self.data,
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'recipient_id': self.recipient_id,
+            'amount': self.amount,
             'signature': str(self.signature)
         }
 
@@ -45,41 +47,87 @@ class Transaction(Jsonifyable):
         return self
 
     def get_data(self):
-        return self.jsonify(self.data)
+        return self.jsonify({
+            'id': self.id,
+            'sender_id': self.sender_id,
+            'recipient_id': self.recipient_id,
+            'amount': self.amount,
+        })
 
     def sign(self, signature):
-        self.set_signature(signature(self.jsonify(self.data)))
+        self.set_signature(signature(self.jsonify(self.get_data())))
         return self
 
+    def assertparams(self):
+        if self.amount < 0:
+            return False
+        return True
 
     def validate(self):
-        public = PublicKey.from_string(self.data.get('sender_id'))
+        if not self.assertparams():
+            return False
+
+        public = PublicKey.from_string(self.sender_id)
         return public.verify(
-            self.jsonify(self.data),
+            self.get_data(),
             self.signature)
+    
+    def __eq__(self, other):
+        if type(other) != Transaction:
+            try:
+                other = Transaction.from_json(other)
+            except Exception as e:
+                return False
+
+        if self.id != other.id:
+            return False
+        if self.sender_id != other.sender_id:
+            return False
+        if self.recipient_id != other.recipient_id:
+            return False
+        if self.amount != other.amount:
+            return False
+
+        return True
 
 
-class Reward(Transaction):
+class Coinbase(Transaction):
     def __init__(self, id, recipient_id, amount):
-        self.data = {
-            'id': id,
-            'recipient_id': recipient_id,
-            'amount': amount
-        }
+        self.id = id
+        self.recipient_id =  recipient_id
+        self.amount = truncate(amount)
     
     def to_dict(self):
-        return {'data': self.data}
+        return {
+            'id': self.id,
+            'recipient_id': self.recipient_id,
+            'amount': self.amount
+        }
     
     def validate(self):
-        return self.data.get('amount') == Reward.amount
+        return self.amount == Coinbase.amount
+    
+    def __eq__(self, other):
+        if self.id != other.id:
+            return False
+        if self.recipient_id != other.recipient_id:
+            return False
+        if self.amount != other.amount:
+            return False
+
+        return True
 
 
 class TransactionArray:
     def __init__(self):
         self.transactions = []
 
-    def append(self, transaction: Transaction):
-        self.transactions.append(transaction)
+    def append(self, transactions: Transaction):
+        if not type(transactions) == list:
+            transactions = [transactions]
+        for transaction in transactions:
+            self.transactions.append(transaction)
+        self.sort()
         return self
 
     def to_dict(self):
@@ -92,8 +140,20 @@ class TransactionArray:
         return self.transactions
 
     def sort(self):
-        sortfunc = lambda x: x.get_id()
-        self.transactions.sort(key=sortfunc)
+        self.transactions.sort(key=lambda x: x.get_id())
 
     def __len__(self):
         return len(self.transactions)
+
+    def __eq__(self, other):
+        self.sort()
+        other.sort()
+
+        if len(self.transactions) != len(other.transactions):
+            return False
+    
+        for i, transaction in enumerate(self.transactions):
+            if transaction != other.transactions[i]:
+                return False
+
+        return True

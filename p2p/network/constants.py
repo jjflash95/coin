@@ -3,12 +3,20 @@ import socket
 import struct
 import traceback
 import time
+import sys
 
 
 GOOGLE = ('www.google.com', 80)
 
+def cthreadname():
+    return str(threading.currentThread().getName())
 
-class ThreadDebugging:
 
-    def debugmsg(self, msg):
-        print('[{}] {}'.format(str(threading.currentThread().getName()), msg))
+def debug(handler, msg):
+    if not handler:
+        return
+
+    handler.write('[{}] {}\n'.format(cthreadname(), msg))
+    if getattr(handler, "flush", None):
+        handler.flush()
+

@@ -1,24 +1,18 @@
 
+from datetime import time
 import hashlib
 import secrets
 import string
 
-from keys.keys import ByteEncoding
-from transaction import Transaction, Reward, TransactionArray
-from transaction import CorruptedTransactionException
-from utils.jsonifyable import Jsonifyable
-from utils.timestamped import TimeStamped
+from encryption.keys.keys import ByteEncoding
+from encryption.transaction import Transaction, TransactionArray
+from encryption.utils.exceptions import *
+from encryption.utils.jsonifyable import Jsonifyable
+from encryption.utils.timestamped import TimeStamped
+from encryption.utils.truncate import truncate
 
 
-
-class CorruptedBlockException(Exception):
-    pass
-
-class FullBlockException(Exception):
-    pass
-
-
-class ProofOfWork:
+class Meanwhile:
     def __init__(self):
         self.value = ''.join([secrets.choice(string.digits) for i in range(10)])
     
@@ -29,31 +23,40 @@ class ProofOfWork:
 class Block(TimeStamped, Jsonifyable):
     limit = 10
 
-    def __init__(self, reward, previous_hash = 0):
+    def __init__(self, coinbase, previous_hash = '0', last_index=0, hash=None, meanwhile=None, timestamp=None):
         super().__init__()
-        self.hash, self.proof_of_work = None, None
-        self.previous_hash = previous_hash
-        self.transactions = TransactionArray()
-        self.reward = reward
-
-
-    def add(self, transaction: Transaction):
-        if not transaction.validate():
-            raise CorruptedTransactionException()
-
-        if not self.can_add_transaction():
-            raise FullBlockException()
-
-        return self._add(transaction)
         
+        if timestamp: self.timestamp = truncate(timestamp)
+    
+        self.index = last_index + 1
+        self.hash, self.meanwhile = hash, meanwhile
+        self.previous_hash = previous_hash
+        self.coinbase = coinbase
+        self.transactions = TransactionArray()
+
+
+    def add(self, transactions):
+        if not type(transactions) == list:
+            transactions = [transactions]
+        
+        for transaction in transactions:
+            if not transaction.validate():
+                raise InvalidTransactionException()
+
+            if not self.can_add_transaction():
+                raise FullBlockException()
+
+            self._add(transaction)
+    
+        self.transactions.sort()
+        return self   
+
 
     def _add(self, transaction: Transaction):
         if self.already_has(transaction):       
-            return self
+            return
 
         self.transactions.append(transaction)
-        self.transactions.sort()
-
 
     def transaction_ids(self):
         return self.transactions.ids()
@@ -73,11 +76,11 @@ class Block(TimeStamped, Jsonifyable):
         challenge = '0'*challenge
         block_data = self.get_block_data()
         
-        bhash, bpow = self.hash_data(block_data)
-        while not bhash.startswith(challenge):
-            bhash, bpow = self.hash_data(block_data)
+        hash, bmeanwhile = self.hash_data(block_data)
+        while not hash.startswith(challenge):
+            hash, bmeanwhile = self.hash_data(block_data)
             
-        self.hash, self.proof_of_work = bhash, bpow
+        self.hash, self.meanwhile = hash, bmeanwhile
         
         return self
 
@@ -86,7 +89,7 @@ class Block(TimeStamped, Jsonifyable):
         hashf = lambda h: hashlib.sha256(
             bytes(h, ByteEncoding.ENCODING)).hexdigest()
         
-        bpow = bpow and bpow or ProofOfWork() 
+        bpow = bpow and bpow or Meanwhile() 
 
         block['pow'] = str(bpow)
         serialized_block = self.jsonify(block)
@@ -94,11 +97,13 @@ class Block(TimeStamped, Jsonifyable):
         return hashf(serialized_block), bpow
 
     def validate(self):
-        return self.hash == self.hash_data(self.get_block_data(), self.proof_of_work)[0]
+        import json
+        return self.hash == self.hash_data(self.get_block_data(), self.meanwhile)[0]
   
 
     def get_block_data(self):
         return {
+            'index': self.index,
             'previous_hash': self.previous_hash,
             'transactions': self.transactions.to_dict()
         }
@@ -106,11 +111,26 @@ class Block(TimeStamped, Jsonifyable):
 
     def to_dict(self):
         return {
+            'index': self.index,
             'previous_hash': self.previous_hash,
             'hash': self.hash,
-            'reward': self.reward.to_dict(),
+            'coinbase': self.coinbase.to_dict(),
             'transactions': [t.to_dict() for t in self.transactions.all()],
-            'timestamp': self.timestamp(),
-            'proof_of_work': str(self.proof_of_work)
+            'timestamp': self.timestamp,
+            'meanwhile': str(self.meanwhile)
         }
 
+    def __eq__(self, other):
+        if self.hash != other.hash:
+            return False
+        if self.previous_hash != other.previous_hash:
+            return False
+        if self.index != other.index:
+            return False
+        if self.coinbase != other.coinbase:
+            return False
+        if self.transactions != other.transactions:
+            return False
+
+
+        return True
