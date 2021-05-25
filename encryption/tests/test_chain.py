@@ -38,7 +38,8 @@ def genesis():
 
 
 load_dotenv()
-challenge = 1
+challenge = 4
+
 pk = PublicKey(path=os.getenv('KEYS_PATH'))
 sk = PrivateKey(path=os.getenv('KEYS_PATH'))
 
