@@ -22,7 +22,7 @@ class Singleton(type):
 class Database():
 
     def __init__(self, onmemory=False):
-        self.conn = sqlite3.connect(self.__buildpath(onmemory))
+        self.conn = sqlite3.connect(self.__buildpath(onmemory), check_same_thread=False)
         self.conn.row_factory = dict_factory
         self.cursor = self.conn.cursor()
         self.__initdb()

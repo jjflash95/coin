@@ -5,6 +5,7 @@ import unittest
 from load_external import *
 from load_external import Peer, LocalStorage
 import threading
+import warnings
 
 
 
@@ -15,13 +16,17 @@ class TestPeerConnection(unittest.TestCase):
     AS SENDING AND RECEIVING DATA FROM PEERS,
     MAYBE LATER ADD LONG SEQUENCES OF DATA TO BE TRANSFERED
     """
-    currentport = 5000
+    currentport = 9000
+
+    def tearDown(self):
+        import time
+        time.sleep(.2)
 
     def getpeer(self, maxpeers=10):
         peer = Peer(maxpeers, self.currentport)
-        # peer.debug = 0
-        # peer.output = None
-        self.currentport += 1
+        peer.debug = 0
+        peer.output = None
+        self.currentport = peer.serverport + 1
         return peer
 
     def runserver(self, peer):
@@ -48,6 +53,7 @@ class TestPeerConnection(unittest.TestCase):
 
     #     network = []
     #     peers = []
+    #     threads = []
     #     numpeers = 5
     
     #     speer = self.getpeer(numpeers)
@@ -65,17 +71,21 @@ class TestPeerConnection(unittest.TestCase):
 
     #     st, speer = self.runserver(speer)
     #     for peer in peers:
-    #         _, peer = self.runclient(peer, shost, sport)
+    #         t, peer = self.runclient(peer, shost, sport)
+    #         threads.append(t)
 
     #     speer.shutdown = True
     #     for peer in peers:
     #         peer.shutdown = True
+        
+    #     st.join()
+    #     [t.join() for t in threads]
 
     #     for peer in [speer, *peers]:
     #         pnetwork = network.copy()
     #         peerconndata = (peer.serverhost, peer.serverport)
     #         pnetwork.remove(peerconndata)
-    #         for guid, conndata in peer.peertable.items():
+    #         for _, conndata in peer.peertable.items():
     #             self.assertTrue(conndata in pnetwork)
     #         self.assertFalse(peerconndata in pnetwork)
 
@@ -114,12 +124,13 @@ class TestPeerConnection(unittest.TestCase):
     #     for peer in peers:
     #         peer.shutdown = True
 
+    #     for t in threads:
+    #         t.join()
+
     #     for peer in [speer, *peers]:
     #         self.assertEqual(len(peer.pool), 1)
     #         self.assertEqual(peer.pool[0], message)
         
-    #     for t in threads:
-    #         t.join()
 
 
     # def testMessagePropagateAndIgnoreIdenticalMessages(self):
@@ -160,12 +171,13 @@ class TestPeerConnection(unittest.TestCase):
     #     for peer in peers:
     #         peer.shutdown = True
 
+    #     for t in threads:
+    #         t.join()
+
     #     for peer in [speer, *peers]:
     #         self.assertEqual(len(peer.pool), 1)
     #         self.assertEqual(peer.pool[0], message)
         
-    #     for t in threads:
-    #         t.join()
     
     # def testPropagateReallyLongMessage(self):
     #     """
@@ -211,12 +223,13 @@ class TestPeerConnection(unittest.TestCase):
     #     for peer in peers:
     #         peer.shutdown = True
 
+    #     for t in threads:
+    #         t.join()
+
     #     for peer in [speer, *peers]:
     #         self.assertEqual(len(peer.pool), 1)
     #         self.assertEqual(peer.pool[0], message)
         
-    #     for t in threads:
-    #         t.join()
 
     # def testPropagateREALLYLongMessageWithSendChunks(self):
     #     """
@@ -302,7 +315,7 @@ class TestPeerConnection(unittest.TestCase):
         speer.storage = storage
         
         for peer in peers:
-            # peer.storage = fakestorage
+            peer.storage = fakestorage
             for chain in peer.request_chain():
                 print(chain)
     
@@ -313,13 +326,14 @@ class TestPeerConnection(unittest.TestCase):
         import time
         time.sleep(2)
 
-        # for peer in [speer, *peers]:
-        #     self.assertEqual(len(peer.pool), 1)
-        #     self.assertEqual(peer.pool[0],)
+        for peer in [speer, *peers]:
+            self.assertEqual(len(peer.pool), 1)
+            # self.assertEqual(peer.pool[0], storage.get)
         
         for t in threads:
             t.join()
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
     unittest.main()

@@ -42,21 +42,30 @@ class Node:
 
     def makeserversocket(self, port, maxqueue=5):
         """maxqueue is how many connections can be queued up"""
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # CHECK THIS
-        # host = socket.gethostbyname(socket.gethostname())
-        # print(host)
-        s.bind(('', port))
-        s.listen(maxqueue)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # CHECK THIS
+            # host = socket.gethostbyname(socket.gethostname())
+            # print(host)
+            s.bind(('', port))
+            s.listen(maxqueue)
+        except OSError:
+            """PORT IS OCCUPIED, TRYING TO BUILD FROM NEXT PORT"""
+            try:
+                s.close()
+            except:
+                pass
+            return self.makeserversocket(port + 1, maxqueue)
+        self.serverport = port
         return s
 
     def peers(self):
@@ -77,8 +86,9 @@ class Node:
 
     def __send(self, host, port, msgtype, msgdata, peerid=None, waitresponse=True):
         responses = []
+
+        peerconn = P2PConnection(peerid, host, port, debug=self.debug)
         try:
-            peerconn = P2PConnection(peerid, host, port, debug=self.debug)
             peerconn.send(msgtype, msgdata)
             debug(self.output, 'Sent {}: {}'.format(peerid, msgtype))
             
@@ -189,10 +199,10 @@ class Node:
         [(response type, response data ),...]"""
     
         responses = []
+        debug(self.output, 'Sending {}{}: {}'.format(host, port, msgtype))
+        peerconn = P2PConnection(self.guid, host, port,
+                debug=self.debug)
         try:
-            debug(self.output, 'Sending {}{}: {}'.format(host, port, msgtype))
-            peerconn = P2PConnection(self.guid, host, port,
-                    debug=self.debug)
             peerconn.send(msgtype, msgdata)
             debug(self.output, 'Sent {} => {}'.format(peerconn.id, msgtype))
 
@@ -204,12 +214,13 @@ class Node:
                     debug(self.output, '[ConnAndSend] Got reply from "{}": {}'.format(pid,
                                     str(responses)))
                     reply = peerconn.receivedata()
-            peerconn.close()
         except KeyboardInterrupt:
             raise
         except Exception:
             if self.debug:
                 traceback.print_exc()
+        finally:
+            peerconn.close()
 
         return responses
 
@@ -249,7 +260,7 @@ class Node:
             except socket.timeout:
                 # Nobody has connected to svport
                 pass
-            except Exception as e:
+            except Exception:
                 if self.debug:
                     traceback.print_exc()
                     continue

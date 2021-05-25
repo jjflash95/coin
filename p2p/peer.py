@@ -1,21 +1,20 @@
-from storage.storage import Storage
 from p2p.network.constants import *
 from p2p.network.enode import ExtendedNode
 from p2p.network.requests import MSGType
 
-from storage.models.models import ChainModel
 
 
 
 class Peer(ExtendedNode):
 
     def __init__(self, maxpeers, serverport, guid=None, serverhost=None, storage=None, debug=0):
+        super(Peer, self).__init__(maxpeers, serverport, guid=guid, serverhost=serverhost, debug=debug)
+        
         self.storage = storage
-        self.pool = None
+        self.pool = []
         self.pending = set()
         self.startpendingroutine(self.__flushpendingpool, 3)
 
-        super().__init__(maxpeers, serverport, guid=guid, serverhost=serverhost, debug=debug)
 
     def setpool(self, pool):
         self.pool = pool
@@ -49,7 +48,7 @@ class Peer(ExtendedNode):
         self.peerlock.acquire()
         self.pool.append(data)
         peerlist = [(peerid, peerdata) for peerid, peerdata in self.peers() if peerid != peerconn.id]
-        self.propagate_transaction(MSGType.TRANSACTION, data, peerlist)
+        self.propagate_transaction(data, peerlist)
         self.peerlock.release()
         
     def propagate_transaction(self, transaction, peerlist=None):
@@ -85,7 +84,7 @@ class Peer(ExtendedNode):
                              args=[clean, delay]).start()
     
     def __cleanpendingpool(self, clean, delay):
-        while True:
+        while not self.shutdown:
             if self.pool is None: continue
             clean()
             time.sleep(delay)

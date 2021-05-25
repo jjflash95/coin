@@ -57,9 +57,12 @@ class ExtendedNode(Node):
                     continue
     
                 self.buildpeers(host, port, depth - 1)
-        except:
+        except socket.error:
+            self.removepeers(peerid)
+        except Exception:
             if self.debug:
                 traceback.print_exc()
+        
             self.removepeers(peerid)
 
 
