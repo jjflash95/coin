@@ -39,3 +39,6 @@ class LocalStorage:
             return chain
 
         return ChainModel.build(chain)
+
+    def haschain(self):
+        return len(self.storage.getchain(buildcascade=False))

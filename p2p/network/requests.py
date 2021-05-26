@@ -12,6 +12,7 @@ class MSGType():
     GET_CHAIN = 'GTCH'
     PUT_CHAIN = 'PCHN'
     TRANSACTION = 'NTRS'
+    BLOCK =  'NBLK'
 
     @staticmethod
     def len():

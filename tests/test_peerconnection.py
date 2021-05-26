@@ -3,7 +3,7 @@
 import unittest
 
 from load_external import *
-from load_external import Peer, LocalStorage
+from load_external import Peer, LocalStorage, MSGType, Transaction, validtransaction
 import threading
 import warnings
 
@@ -24,8 +24,8 @@ class TestPeerConnection(unittest.TestCase):
 
     def getpeer(self, maxpeers=10):
         peer = Peer(maxpeers, self.currentport)
-        peer.debug = 0
-        peer.output = None
+        # peer.debug = 0
+        # peer.output = None
         self.currentport = peer.serverport + 1
         return peer
 
@@ -112,8 +112,8 @@ class TestPeerConnection(unittest.TestCase):
             t, peer = self.runclient(peer, shost, sport)
             threads.append(t)
         
-        message = """{"id": "1", "message": "this is a message"}"""
-        peers[0].propagate_transaction(message)
+        transaction = Transaction.from_json(validtransaction())
+        peers[0].propagate_transaction(transaction)
 
         speer.shutdown = True
         for peer in peers:
@@ -121,7 +121,7 @@ class TestPeerConnection(unittest.TestCase):
 
         for peer in [speer, *peers]:
             self.assertEqual(len(peer.pool), 1)
-            self.assertEqual(peer.pool[0], message)
+            self.assertEqual(peer.pool[0], transaction)
         
         for t in threads:
             t.join()
@@ -156,10 +156,10 @@ class TestPeerConnection(unittest.TestCase):
             t, peer = self.runclient(peer, shost, sport)
             threads.append(t)
 
-        message = """{"id": "1", "message": "this is a duplicated message"}"""
-        peers[0].propagate_transaction(message)
-        peers[0].propagate_transaction(message)
-        peers[0].propagate_transaction(message)
+        transaction = Transaction.from_json(validtransaction())
+        peers[0].propagate_transaction(transaction)
+        peers[0].propagate_transaction(transaction)
+        peers[0].propagate_transaction(transaction)
 
         speer.shutdown = True
         for peer in peers:
@@ -167,12 +167,12 @@ class TestPeerConnection(unittest.TestCase):
 
         for peer in [speer, *peers]:
             self.assertEqual(len(peer.pool), 1)
-            self.assertEqual(peer.pool[0], message)
+            self.assertEqual(peer.pool[0], transaction)
         
         for t in threads:
             t.join()
     
-    def testPropagateReallyLongMessage(self):
+    def testPropagateReallyLongChain(self):
         """
         THIS TEST ENSURES THAT ALL NODES BUILDING PEERS GET THE ROUTING
         TABLE FROM THE SERVER, AND START ASKING FOR EACH PEER OWN ROUTING
@@ -210,7 +210,7 @@ class TestPeerConnection(unittest.TestCase):
         for i in range(2):
             message = message*100
 
-        peers[0].propagate_transaction(message)
+        peers[0].propagate(MSGType.TRANSACTION, message)
 
         speer.shutdown = True
         for peer in peers:
@@ -261,7 +261,7 @@ class TestPeerConnection(unittest.TestCase):
         for i in range(2):
             message = message*100
 
-        peers[0].propagate_transaction(message)
+        peers[0].propagate(MSGType.TRANSACTION, message)
 
         speer.shutdown = True
         for peer in peers:

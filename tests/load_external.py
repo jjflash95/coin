@@ -20,12 +20,13 @@ from encryption.blockchain import BlockChain
 from encryption.generate import coinbase, send
 from encryption.keys.keys import PrivateKey, PublicKey
 from encryption.transaction import Transaction
-from storage.storage import Storage
 from encryption.utils.exceptions import *
-from storage.models.models import ChainModel
 from localstorage import LocalStorage
-
+from p2p.network.requests import MSGType
 from p2p.peer import Peer
+from storage.models.models import ChainModel
+from storage.storage import Storage
+
 
 def getkey(ktype=''):
     if ktype == 'secret': return PrivateKey(os.getenv('KEYS_PATH'))

@@ -95,12 +95,11 @@ class Block(TimeStamped, Jsonifyable):
         challenge = '0'*challenge
         block_data = self.get_block_data()
         
-        hash, bmeanwhile = self.hash_data(block_data)
+        hash, meanwhile = self.hash_data(block_data)
         while not hash.startswith(challenge):
-            hash, bmeanwhile = self.hash_data(block_data)
-            
-        self.hash, self.meanwhile = hash, bmeanwhile
-        
+            hash, meanwhile = self.hash_data(block_data)
+
+        self.hash, self.meanwhile = hash, meanwhile        
         return self
 
 
