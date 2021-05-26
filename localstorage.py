@@ -14,7 +14,10 @@ class LocalStorage:
         self.storage.addblock(block)
         return self
     
-    def addchain(self, chain: BlockChain):
+    def addchain(self, chain):
+        if type(chain) == str:
+            chain = BlockChain.from_json(chain)
+
         self.storage.addchain(chain)
         return self
 
@@ -31,6 +34,7 @@ class LocalStorage:
 
     def getchain(self, buildcascade=True):
         chain = self.storage.getchain(buildcascade)
+
         if not buildcascade:
             return chain
 

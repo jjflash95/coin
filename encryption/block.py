@@ -5,11 +5,12 @@ import secrets
 import string
 
 from encryption.keys.keys import ByteEncoding
-from encryption.transaction import Transaction, TransactionArray
+from encryption.transaction import Coinbase, Transaction, TransactionArray
 from encryption.utils.exceptions import *
 from encryption.utils.jsonifyable import Jsonifyable
 from encryption.utils.timestamped import TimeStamped
 from encryption.utils.truncate import truncate
+import json
 
 
 class Meanwhile:
@@ -34,6 +35,24 @@ class Block(TimeStamped, Jsonifyable):
         self.coinbase = coinbase
         self.transactions = TransactionArray()
 
+    @staticmethod
+    def from_json(data):
+        if type(data) == str:
+            data = json.loads(str)
+
+        cbase = Coinbase.from_json(data.get('coinbase'))
+        block = Block(
+            coinbase=cbase,
+            previous_hash=data.get('previous_hash'),
+            last_index=data.get('index') - 1,
+            hash=data.get('hash'),
+            meanwhile=data.get('meanwhile'),
+            timestamp=data.get('timestamp'))
+        
+        transactions = [Transaction.from_json(t) for t in data.get('transactions') if t]
+        [block.add(t) for t in transactions]
+
+        return block
 
     def add(self, transactions):
         if not type(transactions) == list:
@@ -97,7 +116,6 @@ class Block(TimeStamped, Jsonifyable):
         return hashf(serialized_block), bpow
 
     def validate(self):
-        import json
         return self.hash == self.hash_data(self.get_block_data(), self.meanwhile)[0]
   
 

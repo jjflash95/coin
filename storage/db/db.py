@@ -32,8 +32,6 @@ class Database():
         try:
             return self.__execute(query)
         except sqlite3.Error as e:
-            print(query)
-            print('Sqlite3 error!!!', e)
             self.__rollback()     
     
     def fetchall(self):

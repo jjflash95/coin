@@ -16,7 +16,7 @@ def debug(handler, msg):
     if not handler:
         return
 
-    handler.write('[{}] {}\n'.format(cthreadname(), msg))
+    handler.write('[{}] {}\n'.format(cthreadname(), msg[:90]))
     if getattr(handler, "flush", None):
         handler.flush()
 

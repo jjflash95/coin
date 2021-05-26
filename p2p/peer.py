@@ -22,6 +22,10 @@ class Peer(ExtendedNode):
 
     def getchain(self):
         return self.storage.getchain()
+    
+    def addchain(self, chain):
+        return self.storage.addchain(chain)
+
 
     def _gethandlers(self):
         handlers = super()._gethandlers()
@@ -36,13 +40,14 @@ class Peer(ExtendedNode):
             debug(self.output, 'Storage uninitialized')
             return
         try:
-            debug(self.output, 'Sending chain!!')
             chain = self.getchain()
-            debug(self.output, 'Sending chain of length: {}'.format(len(self.chain)))
+            if not len(chain):
+                return
+
             for block in chain.getblocks():
                 peerconn.send(MSGType.PUT_CHAIN, block)
         except:
-            if self.debug: traceback.print_exc()
+            traceback.print_exc()
 
     def __handle_newtransaction(self, peerconn, data):
         self.peerlock.acquire()
@@ -70,11 +75,10 @@ class Peer(ExtendedNode):
         
     def request_chain(self):
         for _, (host, port) in self.peers():
-            chain = ''
             resp = self.connectandsend(host, port, MSGType.GET_CHAIN)
-            for res in resp:
-                chain += res[1]
-            yield chain
+            chain = [res[1] for res in resp]
+            chain = ','.join(chain)
+            if chain: yield '[{}]'.format(chain)
 
 
     def startpendingroutine(self, clean, delay):

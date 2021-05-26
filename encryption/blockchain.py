@@ -1,11 +1,18 @@
 from encryption.block import Block
 from encryption.utils.jsonifyable import Jsonifyable
 from encryption.utils.exceptions import *
+import json
 
 
 class BlockChain(Jsonifyable):
     def __init__(self, blocks=None):
         self.load(blocks)
+
+    @staticmethod
+    def from_json(string):
+        chain = json.loads(string)
+        blocks = [Block.from_json(block) for block in chain]
+        return BlockChain(blocks)
 
     def load(self, blocks):
         self.chain = []
@@ -13,6 +20,7 @@ class BlockChain(Jsonifyable):
         if not len(self.chain):
             genesis = blocks[0]
             if not genesis.validate():
+                print(genesis)
                 raise InvalidBlockException('Invalid genesis block')
             self.chain.append(genesis)
 

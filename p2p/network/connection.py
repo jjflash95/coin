@@ -50,6 +50,9 @@ class P2PConnection:
 
     def send(self, msgtype, msgdata):
         try:
+            if type(msgdata) != str:
+                msgdata = str(msgdata)
+
             self.tsocket.send(msgtype, msgdata)
         except KeyboardInterrupt:
             raise

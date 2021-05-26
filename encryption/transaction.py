@@ -1,3 +1,4 @@
+import json
 from encryption.keys.keys import ByteEncoding, PublicKey, Signature
 from encryption.utils.exceptions import *
 from encryption.utils.jsonifyable import Jsonifyable
@@ -20,7 +21,8 @@ class Transaction(Jsonifyable):
     @staticmethod
     def from_json(data):
         import json
-        data = json.loads(data)
+        if type(data) == str:
+            data = json.loads(data)
         tid = data.get('id')
         sender_id = data.get('sender_id')
         recipient_id = data.get('recipient_id')
@@ -97,6 +99,15 @@ class Coinbase(Transaction):
         self.recipient_id =  recipient_id
         self.amount = truncate(amount)
     
+    @staticmethod
+    def from_json(data):
+        import json
+        if type(data) == str:
+            data = json.loads(data)
+        
+        return Coinbase(data.get('id'), data.get('recipient_id'), data.get('amount'))
+
+
     def to_dict(self):
         return {
             'id': self.id,
