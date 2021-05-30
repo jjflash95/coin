@@ -8,23 +8,14 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
-
-
-class Database():
+class Database:
 
     def __init__(self, onmemory=False):
+        self.__onmemory__ = onmemory
         self.conn = sqlite3.connect(self.__buildpath(onmemory), check_same_thread=False)
         self.conn.row_factory = dict_factory
         self.cursor = self.conn.cursor()
+        self.__clean()
         self.__initdb()
 
 
@@ -59,6 +50,15 @@ class Database():
 
     def __initdb(self):
         self.cursor.executescript(self.loadquery('initdb'))
+ 
+    def __clean(self):
+        if not self.__onmemory__:
+            return
+        if not self.conn or not self.cursor:
+            return
+        self.__execute("DROP TABLE IF EXISTS `Block`;")
+        self.__execute("DROP TABLE IF EXISTS `Coinbase`;")
+        self.__execute("DROP TABLE IF EXISTS `Transaction`;")
 
     def __del__(self):
         self.conn.close()

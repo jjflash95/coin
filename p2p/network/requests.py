@@ -5,6 +5,7 @@ class MSGType():
     ROUTING_TABLE = 'CPRT'
     PEERJOIN = 'JOIN'
     PEERQUIT = 'QUIT'
+    PEERCOUNT = 'PCNT'
 
     REPLY = 'REPL'
     ERROR = 'ERRO'

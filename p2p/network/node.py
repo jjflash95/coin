@@ -135,7 +135,7 @@ class Node:
         """Runs stabilizer func every n seconds"""
 
         t = threading.Thread(target=self.__runstabilizer,
-                             args=[stabilizer, delay]).start()
+                             args=[stabilizer, delay], daemon=True).start()
 
 
     def addhandler(self, msgtype, handler):

@@ -3,7 +3,9 @@
 from load_external import Block, getkey, coinbase, send, recid
 import unittest
 import random
+import threading
 
+Block.__challenge__ = 2
 
 class TestBlocks(unittest.TestCase):
     """
@@ -12,6 +14,8 @@ class TestBlocks(unittest.TestCase):
     TRANSACTION IS ADDED AFTER THE HASH HAS BEEN CALCULATED
     (dificculty of 2 zeros for testing)
     """
+
+
     def makeblock(self, pk, last_hash, last_index):
         return Block(coinbase(pk), last_hash, last_index)
 
@@ -26,8 +30,7 @@ class TestBlocks(unittest.TestCase):
         for _ in range(totaltransactions):
             t = self.maketransaction(sk, pk, recid())
             block.add(t)
-        challenge = 2
-        block.calculate_hash(challenge)
+        block.calculate_hash()
         self.assertEqual(block.validate(), True)
         self.assertEqual(len(block.transactions), totaltransactions)
 
@@ -40,8 +43,7 @@ class TestBlocks(unittest.TestCase):
             t = self.maketransaction(sk, pk, recid())
             transactions.append(t)
         block.add(transactions)
-        challenge = 2
-        block.calculate_hash(challenge)
+        block.calculate_hash()
         self.assertEqual(block.validate(), True)
         self.assertEqual(len(block.transactions), totaltransactions)
 
@@ -52,8 +54,7 @@ class TestBlocks(unittest.TestCase):
         for _ in range(totaltransactions):
             t = self.maketransaction(sk, pk, recid())
             block.add(t)
-        challenge = 2
-        block.calculate_hash(challenge)
+        block.calculate_hash()
         self.assertEqual(block.validate(), True)
         self.assertEqual(len(block.transactions), totaltransactions)
 

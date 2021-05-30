@@ -4,6 +4,10 @@
 from load_external import BlockChain, Block, getkey, coinbase, send, recid, Storage, ChainModel
 import unittest
 import random
+import threading
+
+
+Block.__challenge__ = 2
 
 
 class TestChainWithStorage(unittest.TestCase):
@@ -16,8 +20,6 @@ class TestChainWithStorage(unittest.TestCase):
     MAYBE ADD IT LATER, OR RESOLVE IT IN DB STORAGE
     """
 
-    challenge = 3
-    
     def makeblock(self, pk, last_hash, last_index):
         return Block(coinbase(pk), last_hash, last_index)
 
@@ -28,7 +30,7 @@ class TestChainWithStorage(unittest.TestCase):
 
     def makechain(self, pk):
         genesis = self.makeblock(pk, '0', 0)
-        genesis.calculate_hash(self.challenge)
+        genesis.calculate_hash()
         return BlockChain([genesis])
 
     def makefullblock(self, sk, pk, recipient_id, last_hash, last_index, length=3):
@@ -37,7 +39,7 @@ class TestChainWithStorage(unittest.TestCase):
             t = self.maketransaction(sk, pk, recipient_id, random.random())
             t.validate()
             block.add(t)
-        block.calculate_hash(self.challenge)
+        block.calculate_hash()
         return block
 
     def makefullchain(self, sk, pk, recid, length):
@@ -55,15 +57,15 @@ class TestChainWithStorage(unittest.TestCase):
         SO DB DOESN'T ROUND THEM ON STORAGE (HASH CHANGES AND 
         SIGNATURE DOES NOT VALIDATE, NICE BUG TO CATCH =D)
         """
-        totalblocks = 7
+        totalblocks = 3
         sk, pk = getkey()
         storage = Storage(onmemory=True)
         chain = self.makefullchain(sk, pk, recid(), totalblocks)
         storage.addchain(chain)
 
         hollowblocks = storage.getchain(buildcascade=False)
-        self.assertEqual(len(chain), len(hollowblocks))
 
+        self.assertEqual(len(chain), len(hollowblocks))
         for i, block in enumerate(chain.getblocks()):
             self.assertEqual(block.hash, hollowblocks[i].get('bhash'))
         

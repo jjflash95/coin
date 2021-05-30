@@ -4,8 +4,10 @@ from load_external import BlockChain, Block, getkey, coinbase, send, recid, Inva
 from load_external import *
 import unittest
 import random
+import threading
 
 
+Block.__challenge__ = 2
 
 class TestChain(unittest.TestCase):
     """
@@ -17,8 +19,6 @@ class TestChain(unittest.TestCase):
     MAYBE ADD IT LATER, OR RESOLVE IT IN DB STORAGE
     """
 
-    challenge = 2
-    
     def makeblock(self, pk, last_hash, last_index):
         return Block(coinbase(pk), last_hash, last_index)
 
@@ -28,7 +28,7 @@ class TestChain(unittest.TestCase):
     
     def makechain(self, pk):
         genesis = self.makeblock(pk, '0', 0)
-        genesis.calculate_hash(self.challenge)
+        genesis.calculate_hash()
         return BlockChain([genesis])
 
     def testMakeValidChainFromLegitBlocksAndValidate(self):
@@ -41,7 +41,7 @@ class TestChain(unittest.TestCase):
             for _ in range(5):
                 t = self.maketransaction(sk, pk, recid())
                 block.add(t)
-            block.calculate_hash(self.challenge)
+            block.calculate_hash()
             chain.add(block)
         self.assertEqual(chain.validate(), True)
         self.assertEqual(len(chain), totalblocks)
@@ -59,7 +59,7 @@ class TestChain(unittest.TestCase):
             transactions = [self.maketransaction(sk, pk, recid()) for i in range(5)]
             block.add(transactions)
             if _ not in invalidblocksindexes:
-                block.calculate_hash(self.challenge)
+                block.calculate_hash()
                 chain.add(block)
             else:
                 with self.assertRaises(InvalidBlockException) as context:
@@ -87,7 +87,7 @@ class TestChain(unittest.TestCase):
             transactions = [self.maketransaction(sk, pk, recid()) for i in range(5)]
             block.add(transactions)
             if _ not in invalidblocksindexes:
-                block.calculate_hash(self.challenge)
+                block.calculate_hash()
             blocks.append(block)
             lasthash = block.hash
             lastindex = block.index

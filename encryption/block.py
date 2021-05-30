@@ -1,5 +1,5 @@
 
-from datetime import time
+import time
 import hashlib
 import secrets
 import string
@@ -19,10 +19,14 @@ class Meanwhile:
     
     def __str__(self):
         return self.value
+    
+    @staticmethod
+    def calculate_challenge(nodes):
+        return 5
 
 
 class Block(TimeStamped, Jsonifyable):
-    limit = 10
+    __limit__, __challenge__ = 30, 5
 
     def __init__(self, coinbase, previous_hash = '0', last_index=0, hash=None, meanwhile=None, timestamp=None):
         super().__init__()
@@ -34,11 +38,25 @@ class Block(TimeStamped, Jsonifyable):
         self.previous_hash = previous_hash
         self.coinbase = coinbase
         self.transactions = TransactionArray()
+    
+    @property
+    def challenge(self):
+        return self.__challenge__
+
+    @challenge.setter
+    def challenge(self, value):
+        minimum = 5
+        maximum = 62
+        if value < minimum:
+            value = minimum
+        if value > maximum:
+            value = maximum
+        self.__challenge__ = value
 
     @staticmethod
     def from_json(data):
         if type(data) == str:
-            data = json.loads(str)
+            data = json.loads(data)
 
         cbase = Coinbase.from_json(data.get('coinbase'))
         block = Block(
@@ -88,16 +106,20 @@ class Block(TimeStamped, Jsonifyable):
  
 
     def can_add_transaction(self):
-        return len(self.transactions) < self.limit
+        return len(self.transactions) < self.__limit__
 
 
-    def calculate_hash(self, challenge: int):
-        challenge = '0'*challenge
+    def calculate_hash(self):
+        challenge = '0'*self.__challenge__
         block_data = self.get_block_data()
-        
+        start = time.time()
+        count = 1
         hash, meanwhile = self.hash_data(block_data)
         while not hash.startswith(challenge):
             hash, meanwhile = self.hash_data(block_data)
+            count += 1
+
+        # print('HASH CALCULATED IN {} TRIES! TOOK {} SECONDS'.format(count, time.time() - start))
 
         self.hash, self.meanwhile = hash, meanwhile        
         return self

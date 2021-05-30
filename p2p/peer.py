@@ -1,3 +1,4 @@
+from p2p.bfilter import BloomFilter
 from storage.models.models import BlockModel
 from p2p.network.constants import *
 from p2p.network.enode import ExtendedNode
@@ -14,11 +15,13 @@ class Peer(ExtendedNode):
     def __init__(self, maxpeers, serverport, guid=None, serverhost=None, storage=None, emitter=None, debug=0):
         super(Peer, self).__init__(maxpeers, serverport, guid=guid, serverhost=serverhost, debug=debug)
         
+        self.filter = BloomFilter(self.guid)
         self.emitter = emitter
         self.storage = storage
         self.pool = []
         self.pending = set()
         self.startpendingroutine(self.__flushpendingpool, 3)
+        self.startpeercountroutine(self.__countpeers, 120)
 
     def emit(self, event, data=None):
         if not self.emitter:
@@ -81,14 +84,18 @@ class Peer(ExtendedNode):
         try:
             block = Block.from_json(data)
         except:
+            debug(self.output, 'Unable to serialize block')
+            if self.debug:
+                traceback.print_exc()
             # Invalid or corrupted block
             return
         if block in self.pool:
+            debug(self.output, 'Block is currently on pool')
             return
 
         self.pool.append(block)
         peerlist = [(peerid, peerdata) for peerid, peerdata in self.peers() if peerid != peerconn.id]
-        self.propagate_transaction(block, peerlist)
+        self.propagate_block(block, peerlist)
         self.emit(Event.NEW_BLOCK)
         self.peerlock.release()
         
@@ -133,7 +140,25 @@ class Peer(ExtendedNode):
         """Tries to send pending transactions every <delay> seconds"""
 
         t = threading.Thread(target=self.__cleanpendingpool,
-                             args=[clean, delay]).start()
+                             args=[clean, delay], daemon=True).start()
+
+    def startpeercountroutine(self, countpeers, delay):
+        """Updates current peers connected to the network every <delay> s"""
+        
+        t = threading.Thread(target=self.__getpeercount,
+                             args=[countpeers, delay], daemon=True).start()
+
+    def __getpeercount(self, countpeers, delay):
+        while not self.shutdown:
+            pc = countpeers()
+            if self.emitter:
+                self.emitter.emit(Event.PEERCOUNT, pc)
+            self.propagate(MSGType.PEERCOUNT, pc)
+            time.sleep(delay)
+
+    def __countpeers(self):
+        # TO DO, implement bloom filter
+        return 2
     
     def __cleanpendingpool(self, clean, delay):
         while not self.shutdown:

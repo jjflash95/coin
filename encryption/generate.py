@@ -1,22 +1,21 @@
-from encryption.utils.exceptions import InvalidKeyException
 import hashlib
 
-from cryptography.exceptions import InvalidKey
-
 from encryption.keys.keys import ByteEncoding, PrivateKey, PublicKey
-from encryption.transaction import Transaction
-from encryption.transaction import Coinbase
+from encryption.transaction import Coinbase, Transaction
+from encryption.utils.exceptions import InvalidKeyException
 from encryption.utils.timestamped import TimeStamped
 
 
 class Send(TimeStamped):
-    secret, public = None, None
+
 
     def __init__(self, secret: PrivateKey, public: PublicKey, recipient_id, amount):
         super().__init__()
         if not secret or not public:
             raise InvalidKeyException()
     
+        self.secret = None
+        self.public = None
         self.transaction = self.generate_transaction(secret, public, recipient_id, amount)
 
     def generate_transaction(self, secret, public, recipient_id, amount):

@@ -3,7 +3,10 @@
 import unittest
 
 from load_external import *
-from load_external import Peer, LocalStorage, MSGType, Transaction, validtransaction
+from load_external import (Peer, LocalStorage, MSGType,
+    Transaction, validtransaction, Block, BlockChain,
+    send, coinbase, getkey, recid)
+import random
 import threading
 import warnings
 
@@ -17,15 +20,13 @@ class TestPeerConnection(unittest.TestCase):
     MAYBE LATER ADD LONG SEQUENCES OF DATA TO BE TRANSFERED
     """
     currentport = 9000
+    challenge = 2
 
-    def tearDown(self):
-        import time
-        time.sleep(.2)
-
-    def getpeer(self, maxpeers=10):
+    def getpeer(self, maxpeers=10, output=False):
         peer = Peer(maxpeers, self.currentport)
-        # peer.debug = 0
-        # peer.output = None
+        if not output:
+            peer.debug = 0
+            peer.output = None
         self.currentport = peer.serverport + 1
         return peer
 
@@ -40,6 +41,18 @@ class TestPeerConnection(unittest.TestCase):
         t.start()
         peer.buildpeers(shost, int(sport))
         return t, peer
+        
+    def makeblock(self, pk, last_hash, last_index):
+        return Block(coinbase(pk), last_hash, last_index)
+
+    def maketransaction(self, sk, pk, recipient_id, amount=None):
+        if amount is None: amount = random.random()
+        return send(sk, pk, recipient_id, amount)
+    
+    def makechain(self, pk):
+        genesis = self.makeblock(pk, '0', 0)
+        genesis.calculate_hash()
+        return BlockChain([genesis])
     
     def testPeerRoutingTables(self):
         """
@@ -174,12 +187,7 @@ class TestPeerConnection(unittest.TestCase):
     
     def testPropagateReallyLongChain(self):
         """
-        THIS TEST ENSURES THAT ALL NODES BUILDING PEERS GET THE ROUTING
-        TABLE FROM THE SERVER, AND START ASKING FOR EACH PEER OWN ROUTING
-        TABLE TO BUILD THE ENTIRE NETWORK, AT LAST WE COMPARE EACH TABLE
-        AND IT SHOULD HAVE ALL CONNECTIONS EXCEPT IT'S OWN.
-
-        E.G: PEER 5002 SHOULD HAVE ALL 5000 ... 5004 EXCEPT PORT 5002
+        TEST PROPAGATION OF FULL BLOCK (TRANSACTION LIMIT)
         """
         network = []
         threads = []
@@ -205,63 +213,13 @@ class TestPeerConnection(unittest.TestCase):
             t, peer = self.runclient(peer, shost, sport)
             threads.append(t)
 
-        # 5.4 MB message
-        message = """{"id": "1", "message": "this is a duplicated message"}"""*10
-        for i in range(2):
-            message = message*100
-
-        peers[0].propagate(MSGType.TRANSACTION, message)
-
-        speer.shutdown = True
-        for peer in peers:
-            peer.shutdown = True
-
-        for peer in [speer, *peers]:
-            self.assertEqual(len(peer.pool), 1)
-            self.assertEqual(peer.pool[0], message)
+        sk, pk = getkey()
+        block = self.makeblock(pk, '0', 0)
+        for i in range(Block.__limit__):
+            block.add(send(sk, pk, recid(), random.random()))
         
-        for t in threads:
-            t.join()
-
-    def testPropagateREALLYLongMessageWithSendChunks(self):
-        """
-        THIS TEST ENSURES THAT ALL NODES BUILDING PEERS GET THE ROUTING
-        TABLE FROM THE SERVER, AND START ASKING FOR EACH PEER OWN ROUTING
-        TABLE TO BUILD THE ENTIRE NETWORK, AT LAST WE COMPARE EACH TABLE
-        AND IT SHOULD HAVE ALL CONNECTIONS EXCEPT IT'S OWN.
-
-        E.G: PEER 5002 SHOULD HAVE ALL 5000 ... 5004 EXCEPT PORT 5002
-        """
-        network = []
-        threads = []
-        peers = []
-        peernum = 1
-    
-        speer = self.getpeer(peernum)
-        shost = speer.serverhost
-        sport = speer.serverport
-        network.append((shost, sport))
-
-
-        for _ in range(peernum):
-            peer = self.getpeer(peernum)
-            host = peer.serverhost
-            port = peer.serverport
-            peers.append(peer)
-            network.append((host, port))
-     
-        t, speer = self.runserver(speer)
-        threads.append(t)
-        for peer in peers:
-            t, peer = self.runclient(peer, shost, sport)
-            threads.append(t)
-
-        # 5.4 MB message
-        message = """{"id": "1", "message": "this is a duplicated message"}"""*10
-        for i in range(2):
-            message = message*100
-
-        peers[0].propagate(MSGType.TRANSACTION, message)
+        block.calculate_hash()
+        peers[0].propagate_block(block)
 
         speer.shutdown = True
         for peer in peers:
@@ -269,7 +227,7 @@ class TestPeerConnection(unittest.TestCase):
 
         for peer in [speer, *peers]:
             self.assertEqual(len(peer.pool), 1)
-            self.assertEqual(peer.pool[0], message)
+            self.assertEqual(peer.pool[0], block)
         
         for t in threads:
             t.join()
@@ -303,7 +261,7 @@ class TestPeerConnection(unittest.TestCase):
 
         storage = LocalStorage()
         speer.storage = storage
-        
+
         for peer in peers:
             fakestorage = LocalStorage(onmemory=True)
             peer.storage = fakestorage
@@ -322,6 +280,72 @@ class TestPeerConnection(unittest.TestCase):
         
         for t in threads:
             t.join()
+
+    def testRequestReallyLongChain(self):
+        """
+        THIS TEST ENSURES A NEW PEER CAN GET A FULL CHAIN
+        """
+        network = []
+        threads = []
+        peers = []
+        peernum = 1
+    
+        speer = self.getpeer(maxpeers=peernum, output=False)
+        shost = speer.serverhost
+        sport = speer.serverport
+        network.append((shost, sport))
+
+        for _ in range(peernum):
+            peer = self.getpeer(maxpeers=peernum, output=False)
+            host = peer.serverhost
+            port = peer.serverport
+            peers.append(peer)
+            network.append((host, port))
+     
+        t, speer = self.runserver(speer)
+        threads.append(t)
+
+        for peer in peers:
+            t, peer = self.runclient(peer, shost, sport)
+            threads.append(t)
+
+        fakestorage = LocalStorage(onmemory=True)
+        speer.storage = fakestorage
+
+        # make chain
+        sk, pk = getkey()
+        chain = self.makechain(pk)
+
+        # print('BUILDING BLOCKS')
+        for i in range(1):
+            # print('BLOCK {} OF 30'.format(i))
+            block = self.makeblock(pk, chain.get_last_hash(), chain.get_last_index())
+            for i in range(Block.__limit__):
+                block.add(self.maketransaction(sk, pk, recid()))
+            
+            block.calculate_hash()
+            chain.add(block)
+        speer.storage.addchain(chain)
+
+        for peer in peers:
+            peer.storage = LocalStorage(onmemory=True)
+            for chain in peer.request_chain():
+                if not chain:
+                    continue
+                peer.addchain(chain)
+    
+        speer.shutdown = True
+        for peer in peers:
+            peer.shutdown = True
+
+        pchain = speer.getchain()
+        for peer in [speer, *peers]:
+            self.assertEqual(pchain, peer.getchain())
+            self.assertEqual(speer.storage.getchain(), peer.storage.getchain())
+        
+        for t in threads:
+            t.join()        
+
 
 
 if __name__ == '__main__':

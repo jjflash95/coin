@@ -138,8 +138,7 @@ class TransactionArray:
             transactions = [transactions]
         for transaction in transactions:
             self.transactions.append(transaction)
-        self.sort()
-        return self
+        return self.sort()
 
     def to_dict(self):
         return [t.to_dict() for t in self.transactions]
@@ -152,6 +151,7 @@ class TransactionArray:
 
     def sort(self):
         self.transactions.sort(key=lambda x: x.get_id())
+        return self
 
     def __len__(self):
         return len(self.transactions)

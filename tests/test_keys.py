@@ -4,6 +4,7 @@ from load_external import PublicKey, PrivateKey, getkey
 from load_external import *
 import os
 import unittest
+import threading
 
 
 class TestKeys(unittest.TestCase):
@@ -13,8 +14,6 @@ class TestKeys(unittest.TestCase):
     IMPLEMENTED AND LOADING A KEY FROM A STRING ASWELL AS AN 
     RSA-FORMATTED FILE WORK THE SAME WAY
     """
-
-
     def testLoadInvalidKey(self):
         with self.assertRaises(Exception) as context:
             PrivateKey.from_string('invalid string')
