@@ -1,7 +1,7 @@
 # pyright: reportMissingModuleSource=false
 # pyright: reportMissingImports=false
 
-from load_external import BlockChain, Block, getkey, coinbase, send, recid, Storage, ChainModel
+from test.load_external import BlockChain, Block, getkey, coinbase, send, recid, Storage, ChainModel
 import unittest
 import random
 import threading
@@ -59,7 +59,7 @@ class TestChainWithStorage(unittest.TestCase):
         """
         totalblocks = 3
         sk, pk = getkey()
-        storage = Storage(onmemory=True)
+        storage = Storage(path=False)
         chain = self.makefullchain(sk, pk, recid(), totalblocks)
         storage.addchain(chain)
 
@@ -77,3 +77,6 @@ class TestChainWithStorage(unittest.TestCase):
 
 if __name__  == '__main__':
     unittest.main()
+
+# '000000000000000000076c036ff5119e5a5a74df77abf64203473364509f7732'
+# '00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048'

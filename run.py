@@ -1,49 +1,49 @@
 import os
-import threading
 
 from client import Client
-from encryption.block import Block, Meanwhile
-from encryption.generate import coinbase
-from encryption.keys.keys import PublicKey
+from config import buildconfig
 from events.blockmanager import BlockManager
 from events.emitter import Emitter
 from localstorage import LocalStorage
-from p2p.peer import Peer
-from utils import getlastblock
 
-from dotenv import load_dotenv
+CONFIG = buildconfig()
+
+KEYS_PATH = CONFIG['keys']['path']
+DB_PATH = CONFIG['db']['path']
+
+SERVERPORT = CONFIG['p2p']['serverport']
+MAXPEERS = CONFIG['p2p']['maxpeers']
+BUILDFROM = CONFIG['p2p']['buildfrom']
+GUID = CONFIG['p2p']['guid']
+
+os.environ['DEBUGMODE'] = CONFIG['client']['debugmode']
+
 
 if __name__ == '__main__':
-    load_dotenv()
-    public = PublicKey(os.getenv('KEYS_PATH'))
-    storage = LocalStorage()
-    client = Client(storage)
+    storage = LocalStorage(DB_PATH)
+    client = Client(
+        keyspath=KEYS_PATH,
+        maxpeers=MAXPEERS,
+        serverport=SERVERPORT,
+        storage=storage)
+
+    client.buildfrom = BUILDFROM.split()
     client.buildp2p()
     client.listen()
     client.p2p.output = None
-    while not client.haschain():
-        t = client.buildchains()
-        t.join()
-    chain = storage.getchain(buildcascade=True)
-    lastblock = getlastblock(storage)
-    newblock = Block(
-        coinbase=coinbase(public),
-        previous_hash=lastblock.get('bhash'),
-        last_index=lastblock.get('bindex'))
     
-    manager = BlockManager(public, newblock)
+    newblock = client.newblock()
+    manager = BlockManager(client.public, newblock, storage)
     emitter = Emitter()
+    emitter.register(manager)
     client.p2p.emitter = emitter
 
     while True:
+        print('calculating hash...')
         newblock.calculate_hash()
         storage.addblock(newblock)
         client.p2p.propagate_block(newblock)
         lastblock = newblock
-        newblock = Block(
-            coinbase=coinbase(public),
-            previous_hash=lastblock.hash,
-            last_index=lastblock.index
-        )
+        newblock = client.newblock()
         manager.block = newblock 
 

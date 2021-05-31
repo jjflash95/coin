@@ -2,10 +2,10 @@
 # pyright: reportMissingImports=false
 import unittest
 
-from load_external import *
-from load_external import (Peer, LocalStorage, MSGType,
+from test.load_external import *
+from test.load_external import (Peer, LocalStorage, MSGType,
     Transaction, validtransaction, Block, BlockChain,
-    send, coinbase, getkey, recid)
+    send, coinbase, getkey, recid, validblockchain)
 import random
 import threading
 import warnings
@@ -215,12 +215,11 @@ class TestPeerConnection(unittest.TestCase):
 
         sk, pk = getkey()
         block = self.makeblock(pk, '0', 0)
-        for i in range(Block.__limit__):
+        for i in range(30):
             block.add(send(sk, pk, recid(), random.random()))
         
         block.calculate_hash()
         peers[0].propagate_block(block)
-
         speer.shutdown = True
         for peer in peers:
             peer.shutdown = True
@@ -259,13 +258,13 @@ class TestPeerConnection(unittest.TestCase):
             t, peer = self.runclient(peer, shost, sport)
             threads.append(t)
 
-        storage = LocalStorage()
+        storage = LocalStorage(path=False)
         speer.storage = storage
 
         for peer in peers:
-            fakestorage = LocalStorage(onmemory=True)
+            fakestorage = LocalStorage(path=False)
             peer.storage = fakestorage
-            for chain in peer.request_chain():
+            for chain in peer.requestchain():
                 if not chain:
                     continue
                 peer.addchain(chain)
@@ -309,7 +308,7 @@ class TestPeerConnection(unittest.TestCase):
             t, peer = self.runclient(peer, shost, sport)
             threads.append(t)
 
-        fakestorage = LocalStorage(onmemory=True)
+        fakestorage = LocalStorage(path=False)
         speer.storage = fakestorage
 
         # make chain
@@ -328,8 +327,8 @@ class TestPeerConnection(unittest.TestCase):
         speer.storage.addchain(chain)
 
         for peer in peers:
-            peer.storage = LocalStorage(onmemory=True)
-            for chain in peer.request_chain():
+            peer.storage = LocalStorage(path=False)
+            for chain in peer.requestchain():
                 if not chain:
                     continue
                 peer.addchain(chain)

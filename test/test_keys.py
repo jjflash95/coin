@@ -1,7 +1,7 @@
 # pyright: reportMissingModuleSource=false
 # pyright: reportMissingImports=false
-from load_external import PublicKey, PrivateKey, getkey
-from load_external import *
+from test.load_external import PublicKey, PrivateKey, getkey
+from test.load_external import *
 import os
 import unittest
 import threading
@@ -21,14 +21,14 @@ class TestKeys(unittest.TestCase):
         self.assertTrue('Could not deserialize key data.' in str(context.exception))
 
     def testPrivateKeysEqualFromStringAndFromEnv(self):
-        with open('{}/{}'.format(os.getenv('KEYS_PATH'), 'private_key.pem'), 'r') as k:
+        with open('{}/{}'.format(KEYS_PATH, 'private_key.pem'), 'r') as k:
             text = k.read()
         textsecret = PrivateKey.from_string(text)
         pathsecret = getkey('secret')
         self.assertEqual(str(textsecret), str(pathsecret))
 
     def testPublicKeysEqualFromStringAndFromEnv(self):
-        with open('{}/{}'.format(os.getenv('KEYS_PATH'), 'public_key.pem'), 'r') as k:
+        with open('{}/{}'.format(KEYS_PATH, 'public_key.pem'), 'r') as k:
             text = k.read()
         textpublic = PublicKey.from_string(text)
         pathpublic = getkey('public')

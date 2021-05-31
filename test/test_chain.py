@@ -1,7 +1,7 @@
 # pyright: reportMissingModuleSource=false
 # pyright: reportMissingImports=false
-from load_external import BlockChain, Block, getkey, coinbase, send, recid, InvalidBlockException
-from load_external import *
+from test.load_external import BlockChain, Block, getkey, coinbase, send, recid, InvalidBlockException
+from test.load_external import *
 import unittest
 import random
 import threading

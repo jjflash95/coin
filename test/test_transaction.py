@@ -1,10 +1,10 @@
 # pyright: reportMissingModuleSource=false
 # pyright: reportMissingImports=false
-from load_external import (
+from test.load_external import (
     Transaction, getkey, send, recid, validtransaction,
     invalidtransaction, InvalidKeyException, InvalidAmountException
 )
-from load_external import *
+from test.load_external import *
 import unittest
 import random
 import threading
