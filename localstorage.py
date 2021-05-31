@@ -7,8 +7,8 @@ from encryption.blockchain import BlockChain
 
 
 class LocalStorage:
-    def __init__(self, onmemory=False):
-        self.storage = Storage(onmemory=onmemory)
+    def __init__(self, path=False):
+        self.storage = Storage(path=path)
 
     def addblock(self, block: Block):
         self.storage.addblock(block)
@@ -37,6 +37,9 @@ class LocalStorage:
 
     def getchain(self, buildcascade=True):
         chain = self.storage.getchain(buildcascade)
+
+        if not chain:
+            return
 
         if not buildcascade:
             return chain

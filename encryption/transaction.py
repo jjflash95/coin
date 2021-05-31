@@ -94,10 +94,12 @@ class Transaction(Jsonifyable):
 
 
 class Coinbase(Transaction):
-    def __init__(self, id, recipient_id, amount):
+    AMOUNT = 10
+
+    def __init__(self, id, recipient_id):
         self.id = id
         self.recipient_id =  recipient_id
-        self.amount = truncate(amount)
+        self.amount = truncate(Coinbase.AMOUNT)
     
     @staticmethod
     def from_json(data):
@@ -105,7 +107,7 @@ class Coinbase(Transaction):
         if type(data) == str:
             data = json.loads(data)
         
-        return Coinbase(data.get('id'), data.get('recipient_id'), data.get('amount'))
+        return Coinbase(data.get('id'), data.get('recipient_id'))
 
 
     def to_dict(self):
@@ -116,7 +118,7 @@ class Coinbase(Transaction):
         }
     
     def validate(self):
-        return self.amount == Coinbase.amount
+        return self.amount == Coinbase.AMOUNT
     
     def __eq__(self, other):
         if self.id != other.id:

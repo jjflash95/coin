@@ -1,6 +1,7 @@
 
 
 class Event:
-    NEW_TRANSACTION = 'newtransaction'
-    NEW_BLOCK = 'newblock'
+    NEWTRANSACTION = 'newtransaction'
+    NEWBLOCK = 'newblock'
     PEERCOUNT = 'peercount'
+    NEWCHAIN = 'newchain'

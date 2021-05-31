@@ -20,8 +20,9 @@ class Peer(ExtendedNode):
         self.storage = storage
         self.pool = []
         self.pending = set()
-        self.startpendingroutine(self.__flushpendingpool, 3)
-        self.startpeercountroutine(self.__countpeers, 120)
+        self.startroutine(self.__cleanpendingpool, self.__flushpendingpool, 3)
+        self.startroutine(self.__getpeercount, self.__countpeers, 120)
+        self.startroutine(self.__updateblockchain, self.__requestchain, 120)
 
     def emit(self, event, data=None):
         if not self.emitter:
@@ -55,7 +56,8 @@ class Peer(ExtendedNode):
             return
         try:
             chain = self.getchain()
-            if not len(chain):
+
+            if not chain or not len(chain):
                 return
 
             for block in chain.getblocks():
@@ -76,7 +78,7 @@ class Peer(ExtendedNode):
     
         peerlist = [(peerid, peerdata) for peerid, peerdata in self.peers() if peerid != peerconn.id]
         self.propagate_transaction(transaction, peerlist)
-        self.emit(Event.NEW_TRANSACTION)
+        self.emit(Event.NEWTRANSACTION)
         self.peerlock.release()
 
     def __handle_newblock(self, peerconn, data):
@@ -96,7 +98,7 @@ class Peer(ExtendedNode):
         self.pool.append(block)
         peerlist = [(peerid, peerdata) for peerid, peerdata in self.peers() if peerid != peerconn.id]
         self.propagate_block(block, peerlist)
-        self.emit(Event.NEW_BLOCK)
+        self.emit(Event.NEWBLOCK)
         self.peerlock.release()
         
     def propagate_transaction(self, transaction, peerlist=None):
@@ -128,31 +130,53 @@ class Peer(ExtendedNode):
         for _, (host, port) in peerlist:
             self.connectandsend(host, port, msgtype, msgdata)
         
-    def request_chain(self):
+
+    def startroutine(self, loop, routine, delay):
+        t = threading.Thread(target=loop,
+                             args=[routine, delay], daemon=True).start()
+
+    # def startpendingroutine(self, clean, delay):
+    #     """Tries to send pending transactions every <delay> seconds"""
+
+    #     t = threading.Thread(target=self.__cleanpendingpool,
+    #                          args=[clean, delay], daemon=True).start()
+
+    # def startpeercountroutine(self, countpeers, delay):
+    #     """Updates current peers connected to the network every <delay> s"""
+        
+    #     t = threading.Thread(target=self.__getpeercount,
+    #                          args=[countpeers, delay], daemon=True).start()
+
+    # def startupdatechainrequest(self, updatechain, delay):
+    #     """Updates entire chain to keep consistency"""
+    #     t = threading.Thread(target=self.__requestchain,
+    #                         args=[updatechain, delay], daemon=True).start()
+
+
+    def __updateblockchain(self, requestchain, delay):
+        while not self.shutdown:
+            requestchain()
+            time.sleep(delay)
+
+    def requestchain(self):
+        for c in self.__requestchain():
+            yield c
+            
+    def __requestchain(self):
         for _, (host, port) in self.peers():
             resp = self.connectandsend(host, port, MSGType.GET_CHAIN)
             chain = [res[1] for res in resp]
             chain = ','.join(chain)
-            if chain: yield '[{}]'.format(chain)
-
-
-    def startpendingroutine(self, clean, delay):
-        """Tries to send pending transactions every <delay> seconds"""
-
-        t = threading.Thread(target=self.__cleanpendingpool,
-                             args=[clean, delay], daemon=True).start()
-
-    def startpeercountroutine(self, countpeers, delay):
-        """Updates current peers connected to the network every <delay> s"""
-        
-        t = threading.Thread(target=self.__getpeercount,
-                             args=[countpeers, delay], daemon=True).start()
+            if chain:
+                chain = '[{}]'.format(chain)
+                self.emit(Event.NEWCHAIN, chain)
+                yield chain
 
     def __getpeercount(self, countpeers, delay):
         while not self.shutdown:
             pc = countpeers()
             if self.emitter:
-                self.emitter.emit(Event.PEERCOUNT, pc)
+                self.emit(Event.PEERCOUNT, pc)
             self.propagate(MSGType.PEERCOUNT, pc)
             time.sleep(delay)
 

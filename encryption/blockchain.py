@@ -2,11 +2,13 @@ from encryption.block import Block
 from encryption.utils.jsonifyable import Jsonifyable
 from encryption.utils.exceptions import *
 import json
+import os
 
 
 class BlockChain(Jsonifyable):
-    def __init__(self, blocks=None):
-        self.load(blocks)
+
+    def __init__(self, blocks=[]):
+        self.add(blocks)
 
     @staticmethod
     def from_json(string):
@@ -14,31 +16,20 @@ class BlockChain(Jsonifyable):
         blocks = [Block.from_json(block) for block in chain]
         return BlockChain(blocks)
 
-    def load(self, blocks):
-        self.chain = []
-
-        if not len(self.chain):
-            genesis = blocks[0]
-            if not genesis.validate():
-                print(genesis)
-                raise InvalidBlockException('Invalid genesis block')
-            self.chain.append(genesis)
-
-        for block in blocks[1:]:
-            self.add(block)
-
-        return self
-
     def remove_block(self):
         self.chain = self.chain[:-1]
 
     def add(self, blocks):
+        if not hasattr(self, 'chain'):
+            self.chain = []
+
         if type(blocks) != list:
             blocks = [blocks]
         
         for block in blocks:
             if not block.validate():
-                raise InvalidBlockException('invalid block: {}'.format(block.hash))
+                if os.environ.get('DEBUGMODE', False):
+                    print('invalid block: {}'.format(block.hash))
             self.chain.append(block)
 
             while not self.validate() and len(self.chain) > 1:
@@ -59,9 +50,15 @@ class BlockChain(Jsonifyable):
         return True
 
     def get_last_hash(self):
+        if not self.chain:
+            return '0'
+
         return self.chain[-1].hash
     
     def get_last_index(self):
+        if not self.chain:
+            return 0
+
         return self.chain[-1].index
 
     def to_dict(self):

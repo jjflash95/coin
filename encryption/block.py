@@ -1,8 +1,6 @@
 
 import time
 import hashlib
-import secrets
-import string
 
 from encryption.keys.keys import ByteEncoding
 from encryption.transaction import Coinbase, Transaction, TransactionArray
@@ -14,25 +12,21 @@ import json
 
 
 class Meanwhile:
-    def __init__(self):
-        self.value = ''.join([secrets.choice(string.digits) for i in range(10)])
-    
-    def __str__(self):
-        return self.value
-    
     @staticmethod
     def calculate_challenge(nodes):
-        return 5
+        return Block.__challenge__
 
 
 class Block(TimeStamped, Jsonifyable):
-    __limit__, __challenge__ = 30, 5
+    __limit__, __challenge__ = 30, 15
 
-    def __init__(self, coinbase, previous_hash = '0', last_index=0, hash=None, meanwhile=None, timestamp=None):
+    def __init__(self, coinbase, previous_hash = '0', last_index=0, hash=None, meanwhile=0, timestamp=None):
         super().__init__()
         
-        if timestamp: self.timestamp = truncate(timestamp)
+        if timestamp:
+            self.timestamp = truncate(timestamp)
     
+        self.meanwhile = meanwhile
         self.index = last_index + 1
         self.hash, self.meanwhile = hash, meanwhile
         self.previous_hash = previous_hash
@@ -125,19 +119,22 @@ class Block(TimeStamped, Jsonifyable):
         return self
 
 
-    def hash_data(self, block, bpow = None):
+    def hash_data(self, block, meanwhile = None):
+        if not meanwhile:
+            self.meanwhile += 1
+
         hashf = lambda h: hashlib.sha256(
             bytes(h, ByteEncoding.ENCODING)).hexdigest()
-        
-        bpow = bpow and bpow or Meanwhile() 
 
-        block['pow'] = str(bpow)
+        meanwhile = meanwhile and meanwhile or self.meanwhile
+        block['meanwhile'] = str(meanwhile)
         serialized_block = self.jsonify(block)
 
-        return hashf(serialized_block), bpow
+        return hashf(serialized_block), meanwhile
 
     def validate(self):
-        return self.hash == self.hash_data(self.get_block_data(), self.meanwhile)[0]
+        calculatedhash = self.hash_data(self.get_block_data(), self.meanwhile)[0]
+        return self.hash == calculatedhash and self.hash.startswith('0'*self.__challenge__)
   
 
     def get_block_data(self):
