@@ -20,7 +20,9 @@ python3-cryptography package
 
 ## Running tests ⚙️
 
-_cd path/to/project & python -m unittest_
+```
+cd path/to/project & python -m unittest
+```
 
 ### End to end test cases 🔩
 
