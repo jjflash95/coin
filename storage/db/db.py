@@ -10,9 +10,9 @@ def dict_factory(cursor, row):
 
 class Database:
 
-    def __init__(self, onmemory=False):
-        self.__onmemory__ = onmemory
-        self.conn = sqlite3.connect(self.__buildpath(onmemory), check_same_thread=False)
+    def __init__(self, path=False):
+        self.__path__ = path
+        self.conn = sqlite3.connect(self.__buildpath(), check_same_thread=False)
         self.conn.row_factory = dict_factory
         self.cursor = self.conn.cursor()
         self.__clean()
@@ -43,16 +43,16 @@ class Database:
     def __rollback(self):
         self.conn.rollback()
 
-    def __buildpath(self, onmemory):
-        if onmemory:
+    def __buildpath(self):
+        if not self.__path__:
             return ":memory:"
-        return "{}/{}".format(os.getenv('DB_PATH'), "storage.db")
+        return "{}/{}".format(self.__path__, "storage.db")
 
     def __initdb(self):
         self.cursor.executescript(self.loadquery('initdb'))
  
     def __clean(self):
-        if not self.__onmemory__:
+        if self.__path__:
             return
         if not self.conn or not self.cursor:
             return

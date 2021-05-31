@@ -37,7 +37,7 @@ class BlockModel:
         cbrecid = header.get('cbase_recipient_id')
         cbamount = header.get('cbase_amount')
 
-        coinbase = Coinbase(id=cbid, recipient_id=cbrecid, amount=cbamount)
+        coinbase = Coinbase(id=cbid, recipient_id=cbrecid)
         block = Block(coinbase=coinbase,
             previous_hash=prevhash,
             last_index=lastindex,

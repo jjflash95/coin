@@ -10,8 +10,8 @@ INDEXCOL = 'block_index'
 
 
 class Storage:
-    def __init__(self, onmemory=False):
-        self.db = Database(onmemory)
+    def __init__(self, path=False):
+        self.db = Database(path)
 
     def loadquery(self, q):
         return self.db.loadquery(q)
