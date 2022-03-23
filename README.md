@@ -1,4 +1,4 @@
-# VAAAAAAAAAMO NIUBEEEL
+# XD
 
 _Crypto attempt_
 
